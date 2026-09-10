@@ -33,16 +33,16 @@ export function Hero({ mode, onModeChange }: HeroProps) {
     <section aria-label="FixMyPDF introduction" className="max-w-3xl mx-auto space-y-4 text-center">
       <Badge
         variant="outline"
-        className="bg-orange-50 border-orange-200/60 text-orange-700 font-mono text-xs gap-1.5 px-3 py-1"
+        className="bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400 font-mono text-xs gap-1.5 px-3 py-1"
       >
-        <Zap className="size-3.5 text-orange-600" aria-hidden="true" />
+        <Zap className="size-3.5 text-orange-600 dark:text-orange-400" aria-hidden="true" />
         Deterministic Portal Triage
       </Badge>
-      <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
+      <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight">
         Your PDF is wrong. <br className="hidden sm:inline" />
         We’ll fix it.
       </h1>
-      <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+      <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
         No complicated toolboxes. Tell us the hard upload limit or the pages you need, and our
         browser engine safely resizes and trims it — nothing is ever uploaded.
       </p>
@@ -62,8 +62,8 @@ export function Hero({ mode, onModeChange }: HeroProps) {
               className={cn(
                 "flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all",
                 active
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:text-slate-900"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-card text-muted-foreground border border-border hover:border-muted-foreground/40 hover:text-foreground"
               )}
             >
               <Icon className={cn("size-4", active && "text-orange-400")} aria-hidden="true" />

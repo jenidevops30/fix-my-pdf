@@ -62,7 +62,7 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 font-semibold">
+        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
           Step 1 • Mark The Cuts
         </p>
         <h3 className="text-xl font-bold">Which pages should go?</h3>
@@ -81,7 +81,7 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-slate-500">Quick actions:</span>
+        <span className="text-xs text-muted-foreground">Quick actions:</span>
         <button
           type="button"
           onClick={applyBlanks}
@@ -91,37 +91,37 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
               ? "Fill in the blank pages found by the ink scan"
               : "Available once the page scan finishes"
           }
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 min-h-[32px]"
+          className="rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors disabled:opacity-50 min-h-[32px]"
         >
           Remove blank pages
         </button>
         <button
           type="button"
           onClick={() => setParity("odd")}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 transition-colors min-h-[32px]"
+          className="rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors min-h-[32px]"
         >
           Remove odd pages
         </button>
         <button
           type="button"
           onClick={() => setParity("even")}
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 transition-colors min-h-[32px]"
+          className="rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors min-h-[32px]"
         >
           Remove even pages
         </button>
       </div>
 
       <div className="space-y-1">
-        <p className="text-sm text-slate-600 font-mono">
+        <p className="text-sm text-muted-foreground font-mono">
           {remaining} of {info.pageCount} pages will remain
         </p>
         {parseError && (
-          <p className="text-rose-600 text-xs" role="alert">
+          <p className="text-rose-600 dark:text-rose-400 text-xs" role="alert">
             {parseError}
           </p>
         )}
         {!parseError && removingAll && (
-          <p className="text-amber-600 text-xs">
+          <p className="text-amber-600 dark:text-amber-400 text-xs">
             A PDF needs at least one page — leave something behind.
           </p>
         )}
@@ -131,7 +131,7 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
         type="button"
         disabled={working || parsed.length === 0 || removingAll}
         onClick={() => onRemove(parsed)}
-        className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-base"
+        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base"
       >
         <Trash2 aria-hidden="true" />
         Remove {parsed.length} Pages

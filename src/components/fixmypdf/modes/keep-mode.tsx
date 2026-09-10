@@ -72,7 +72,7 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 font-semibold">
+        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
           Step 1 • Pick Your Pages
         </p>
         <h3 className="text-xl font-bold">Which pages do you need?</h3>
@@ -90,10 +90,10 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
           </div>
           <Progress
             value={analysis.progress?.percent ?? 5}
-            className="bg-slate-200/80 [&_[data-slot=progress-indicator]]:bg-orange-600"
+            className="bg-muted [&_[data-slot=progress-indicator]]:bg-orange-600 dark:[&_[data-slot=progress-indicator]]:bg-orange-500"
             aria-label="Analyzing pages"
           />
-          <p className="font-mono text-xs text-slate-600">
+          <p className="font-mono text-xs text-muted-foreground">
             {analysis.progress
               ? `${analysis.progress.phase} · ${analysis.progress.detail ?? ""}`
               : "Analyzing pages…"}
@@ -113,10 +113,10 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
                   aria-label={`Select page ${n}`}
                   onClick={() => toggle(n)}
                   className={cn(
-                    "relative rounded-lg border overflow-hidden aspect-[3/4] bg-slate-50 transition-all",
+                    "relative rounded-lg border overflow-hidden aspect-[3/4] bg-muted transition-all",
                     isSel
                       ? "border-orange-500 ring-2 ring-orange-500"
-                      : "border-slate-200 hover:border-slate-400"
+                      : "border-border hover:border-muted-foreground/50"
                   )}
                 >
                   {thumb ? (
@@ -139,13 +139,13 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-mono text-slate-600">Selected:</span>
+              <span className="text-sm font-mono text-muted-foreground">Selected:</span>
               <Badge
                 className={cn(
                   "font-mono max-w-full",
                   sorted.length
-                    ? "bg-orange-100 text-orange-800 border-transparent"
-                    : "bg-slate-100 text-slate-500 border-transparent"
+                    ? "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300 border-transparent"
+                    : "bg-muted text-muted-foreground border-transparent"
                 )}
               >
                 <span className="truncate">{sorted.length ? pagesToCompactSpec(sorted) : "none"}</span>
@@ -179,14 +179,14 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
                 className="font-mono text-sm h-10"
               />
               {specError && (
-                <p className="text-rose-600 text-xs" role="alert">
+                <p className="text-rose-600 dark:text-rose-400 text-xs" role="alert">
                   {specError}
                 </p>
               )}
             </div>
 
             {sorted.length > 0 && (
-              <p className="text-[11px] font-mono text-slate-400 break-all">
+              <p className="text-[11px] font-mono text-muted-foreground/70 break-all">
                 → {baseName(file.name)}-pages-{pagesForFilename(sorted)}.pdf
               </p>
             )}
@@ -196,7 +196,7 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
             type="button"
             disabled={working || sorted.length === 0}
             onClick={() => onExtract(sorted)}
-            className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-base"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base"
           >
             <Scissors aria-hidden="true" />
             Extract {sorted.length} Pages

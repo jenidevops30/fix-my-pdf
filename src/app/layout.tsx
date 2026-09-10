@@ -1,18 +1,29 @@
 import type { Metadata } from "next";
-import { DM_Mono, Anonymous_Pro } from "next/font/google";
+import { DM_Mono, DM_Sans, Jost } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 
+/**
+ * Typography system (loaded via next/font/google — self-hosted equivalent of
+ * the Google Fonts <head> embed, zero external requests at runtime):
+ *  - DM Mono  → buttons, inputs, labels, mono/technical text, h2–h6 headings
+ *  - DM Sans  → body copy (variable 100–1000)
+ *  - Jost     → display voice for the hero headline (variable 100–900)
+ */
 const dmMono = DM_Mono({
   variable: "--font-dm-mono",
   weight: ["300", "400", "500"],
   subsets: ["latin"],
 });
 
-const anonPro = Anonymous_Pro({
-  variable: "--font-anon-pro",
-  weight: ["400", "700"],
-  style: ["normal", "italic"],
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+});
+
+const jost = Jost({
+  variable: "--font-jost",
   subsets: ["latin"],
 });
 
@@ -50,10 +61,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${dmMono.variable} ${anonPro.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
+        className={`${dmMono.variable} ${dmSans.variable} ${jost.variable} font-sans antialiased bg-background text-foreground min-h-screen flex flex-col`}
       >
-        {children}
-        <Toaster position="bottom-right" richColors />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster position="bottom-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

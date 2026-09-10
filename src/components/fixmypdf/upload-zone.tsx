@@ -64,22 +64,22 @@ export function UploadZone({ onFileSelected }: UploadZoneProps) {
         className={cn(
           "rounded-2xl border-2 border-dashed py-16 px-6 text-center cursor-pointer transition-colors",
           dragOver
-            ? "border-orange-400 bg-orange-50/60"
-            : "border-slate-300 bg-slate-50/50 hover:bg-orange-50/40 hover:border-orange-400"
+            ? "border-orange-500/70 bg-orange-500/10"
+            : "border-border bg-muted/40 hover:bg-orange-500/5 hover:border-orange-500/60"
         )}
       >
-        <div className="size-14 mx-auto rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center">
-          <FileUp className="size-6 text-orange-600" aria-hidden="true" />
+        <div className="size-14 mx-auto rounded-2xl bg-card border border-border shadow-sm flex items-center justify-center">
+          <FileUp className="size-6 text-orange-600 dark:text-orange-400" aria-hidden="true" />
         </div>
         <h3 className="text-xl font-bold mt-4">Drop your PDF here</h3>
-        <p className="text-sm text-slate-500 font-mono mt-1">
+        <p className="text-sm text-muted-foreground font-mono mt-1">
           or click to browse — it never leaves your device
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           {MINI_BADGES.map((badge) => (
             <span
               key={badge}
-              className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-500"
+              className="rounded-full border border-border bg-card px-2.5 py-1 font-mono text-[11px] text-muted-foreground"
             >
               {badge}
             </span>
@@ -105,7 +105,7 @@ export function UploadZone({ onFileSelected }: UploadZoneProps) {
           size="sm"
           onClick={loadSample}
           disabled={loadingSample}
-          className="text-xs text-slate-600 h-9"
+          className="text-xs text-muted-foreground h-9"
         >
           {loadingSample ? (
             <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />

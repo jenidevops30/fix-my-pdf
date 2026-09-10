@@ -92,3 +92,19 @@ Work Log:
 
 Stage Summary:
 - FixMyPDF is production-ready: every MVP fix from the concept doc is implemented, browser-verified end-to-end with real downloads validated byte-level. All processing is client-side (privacy claim is true). Zero runtime errors in dev.log.
+
+---
+Task ID: 6
+Agent: main orchestrator (Z.ai Code)
+Task: Add dark mode (next-themes) + switch typography to DM Mono / DM Sans / Jost
+
+Work Log:
+- Rewrote `src/app/layout.tsx`: swapped Anonymous Pro for DM Sans (--font-dm-sans) and added Jost (--font-jost) via next/font/google (self-hosted equivalent of the user's Google Fonts <head> embed); wrapped app in next-themes ThemeProvider (attribute="class", defaultTheme="system", disableTransitionOnChange); body now uses font-sans (DM Sans).
+- Created `src/components/theme-provider.tsx` and `src/components/theme-toggle.tsx` (CSS-driven sun/moon icon swap to avoid hydration mismatch; aria-label "Toggle dark mode").
+- Rewrote `src/app/globals.css` palettes: light = FixMyPDF brand (canvas #f8faff, ink #0b1329 primary, orange-500 ring), dark = deep-navy "midnight blueprint" (#060c1b bg, #0c1526 card, light primary for inverted buttons, rgba slate-blue borders); added --font-display → Jost theme key, .dark ::selection, .dark slim-scrollbar styles.
+- Added ThemeToggle to header; restyled header/hero/footer/how-it-works/privacy-ribbon/upload-zone/file-bar/workspace/secondary-cards/result-panel/app root plus all 6 mode files to semantic tokens (bg-card, bg-muted, text-muted-foreground, border-border, bg-primary/text-primary-foreground) and dark: variants for orange/emerald/rose/amber accents (e.g. bg-emerald-500/10, dark:text-orange-400); progress tracks → bg-muted with dark orange indicator.
+- Typography roles: DM Sans = body, DM Mono = h2-h6/buttons/inputs/labels/mono text (unchanged base rule), Jost = hero h1 via new font-display utility.
+- Verification: bun run lint → 0 problems; bunx tsc --noEmit clean; Agent Browser E2E — light full page ✓, dark full page ✓, toggle round-trip dark→light→dark ✓, theme + DM Sans persist after reload (computed style checked) ✓; dark-mode golden flows: sample load → Make It Fit ≤1.0 MB → "Passed All Limits" 891 KB (-67%) pass ledger + download click ✓; Keep-pages thumbnail grid in dark ✓; mobile 390×844 light + dark stack cleanly with sticky footer ✓; zero console/page errors; dev.log clean.
+
+Stage Summary:
+- FixMyPDF now ships a first-class dark theme (navy brand, inverted CTAs) with a header toggle + system default, and the requested font system: DM Mono (technical voice) + DM Sans (body) + Jost (display headline). No engine/lib changes; all previous flows still browser-verified green in both themes.

@@ -28,7 +28,7 @@ export function Workspace({ file, info, mode, result, analysis, callbacks }: Wor
     <section
       id="workspace"
       aria-label="Fix workspace"
-      className="scroll-mt-24 bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-10"
+      className="scroll-mt-24 bg-card rounded-2xl border border-border shadow-sm p-6 sm:p-10"
     >
       {!file || !info ? (
         <UploadZone onFileSelected={callbacks.onFileSelected} />

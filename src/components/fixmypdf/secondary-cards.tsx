@@ -37,19 +37,19 @@ function ModeCard({ id, active, icon: Icon, title, body, cta, onPick, children }
         }
       }}
       className={cn(
-        "p-6 gap-4 cursor-pointer transition-all hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2",
-        active && "border-orange-400 bg-orange-50/30"
+        "p-6 gap-4 cursor-pointer transition-all hover:border-muted-foreground/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2",
+        active && "border-orange-500/70 bg-orange-500/10"
       )}
     >
-      <div className="size-10 rounded-lg bg-slate-100 flex items-center justify-center">
-        <Icon className="size-5 text-slate-700" aria-hidden="true" />
+      <div className="size-10 rounded-lg bg-muted flex items-center justify-center">
+        <Icon className="size-5 text-foreground/80" aria-hidden="true" />
       </div>
       <h3 className="font-bold">{title}</h3>
-      <p className="text-xs text-slate-500">{body}</p>
+      <p className="text-xs text-muted-foreground">{body}</p>
       {children}
       <Button
         asChild
-        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 text-xs font-bold pointer-events-none mt-auto"
+        className="w-full bg-muted hover:bg-accent text-foreground text-xs font-bold pointer-events-none mt-auto"
         tabIndex={-1}
       >
         <span>{cta}</span>
@@ -68,7 +68,7 @@ export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
     <section aria-label="Other surgical solutions" className="space-y-6">
       <div className="space-y-1">
         <h2 className="text-2xl font-bold">Other Surgical Solutions</h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           Pick the exact fix you need — no settings maze.
         </p>
       </div>
@@ -82,8 +82,8 @@ export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
           cta="Open Page Picker →"
           onPick={pick}
         >
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 font-mono text-xs space-y-1">
-            <span className="block text-[10px] uppercase text-slate-400">Selected pages:</span>
+          <div className="bg-muted/50 border border-border rounded-lg p-3 font-mono text-xs space-y-1">
+            <span className="block text-[10px] uppercase text-muted-foreground/80">Selected pages:</span>
             <span className="block font-bold">3, 7, 12, 14-16</span>
           </div>
         </ModeCard>
@@ -97,15 +97,15 @@ export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
           cta="Paste The Rules →"
           onPick={pick}
         >
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
-            <p className="italic text-[11px] text-slate-600 line-clamp-2">
+          <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-2">
+            <p className="italic text-[11px] text-muted-foreground line-clamp-2">
               Upload must be PDF, strictly under 2 MB, max 4 pages.
             </p>
             <div className="flex flex-wrap gap-1.5">
-              <Badge className="bg-emerald-100 text-emerald-800 border-transparent font-mono text-[10px]">
+              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent font-mono text-[10px]">
                 ≤ 2.0 MB
               </Badge>
-              <Badge className="bg-emerald-100 text-emerald-800 border-transparent font-mono text-[10px]">
+              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent font-mono text-[10px]">
                 ≤ 4 Pages
               </Badge>
             </div>
@@ -121,9 +121,9 @@ export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
           cta="Scan For Blanks →"
           onPick={pick}
         >
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
-            <span className="block text-xs font-bold text-orange-600">6 blanks found</span>
-            <span className="block font-mono text-[10px] text-slate-500">
+          <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1">
+            <span className="block text-xs font-bold text-orange-600 dark:text-orange-400">6 blanks found</span>
+            <span className="block font-mono text-[10px] text-muted-foreground">
               Pages 4, 9, 11, 18, 22, 30 will be cut
             </span>
           </div>

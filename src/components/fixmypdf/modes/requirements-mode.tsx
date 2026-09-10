@@ -28,11 +28,11 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 font-semibold">
+        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
           Step 1 • Paste The Rules
         </p>
         <h3 className="text-xl font-bold">What does the website say?</h3>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Paste the upload instructions. We read them locally — no AI, just parsing.
         </p>
       </header>
@@ -55,8 +55,8 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
                   className={cn(
                     "font-mono",
                     actionableChip
-                      ? "bg-emerald-100 text-emerald-800 border-transparent"
-                      : "bg-slate-100 text-slate-600 border-transparent"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent"
+                      : "bg-muted text-muted-foreground border-transparent"
                   )}
                 >
                   {r.label}
@@ -67,7 +67,7 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
           </div>
         )}
         {text.trim().length > 0 && actionable.length === 0 && (
-          <p role="status" className="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 p-3 text-xs">
+          <p role="status" className="rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 p-3 text-xs">
             No size or page limit detected yet — mention something like “under 2 MB” or “max 10
             pages”.
           </p>
@@ -82,7 +82,7 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
         />
         <Label
           htmlFor="req-strip-meta"
-          className="text-xs text-slate-600 font-normal cursor-pointer leading-snug"
+          className="text-xs text-muted-foreground font-normal cursor-pointer leading-snug"
         >
           Strip hidden tracking metadata
         </Label>

@@ -42,7 +42,7 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 font-semibold">
+        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
           Step 1 • Search Text
         </p>
         <h3 className="text-xl font-bold">Find pages containing a word</h3>
@@ -66,7 +66,7 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
           type="submit"
           aria-label="Run search"
           disabled={searching || !query.trim()}
-          className="h-10 bg-slate-900 hover:bg-slate-800 text-white"
+          className="h-10 bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           {searching ? (
             <Loader2 className="animate-spin" aria-hidden="true" />
@@ -81,53 +81,53 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
         <div className="space-y-2" aria-busy="true">
           <Progress
             value={progress?.percent ?? 5}
-            className="bg-slate-200/80 [&_[data-slot=progress-indicator]]:bg-orange-600"
+            className="bg-muted [&_[data-slot=progress-indicator]]:bg-orange-600 dark:[&_[data-slot=progress-indicator]]:bg-orange-500"
             aria-label="Searching"
           />
-          <p className="font-mono text-xs text-slate-600">
+          <p className="font-mono text-xs text-muted-foreground">
             {progress ? `${progress.phase} · ${progress.detail ?? ""}` : "Searching pages…"}
           </p>
         </div>
       )}
 
       {error && (
-        <p className="text-rose-600 text-xs" role="alert">
+        <p className="text-rose-600 dark:text-rose-400 text-xs" role="alert">
           {error}
         </p>
       )}
 
       {outcome && outcome.pages.length > 0 && (
         <div className="space-y-4">
-          <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+          <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/70">
               <span className="text-sm font-bold">
                 Found on {outcome.pages.length} pages · {outcome.matchCount} matches
               </span>
-              <Badge className="bg-emerald-100 text-emerald-800 border-transparent font-mono shrink-0">
+              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent font-mono shrink-0">
                 {outcome.matchCount} hits
               </Badge>
             </div>
-            <div className="max-h-64 overflow-y-auto slim-scrollbar divide-y divide-slate-100 px-4">
+            <div className="max-h-64 overflow-y-auto slim-scrollbar divide-y divide-border/70 px-4">
               {outcome.pages.map((p) => (
                 <div key={p} className="flex items-start gap-3 py-2">
-                  <Badge className="bg-slate-100 text-slate-700 border-transparent font-mono shrink-0">
+                  <Badge className="bg-muted text-foreground/80 border-transparent font-mono shrink-0">
                     p.{p}
                   </Badge>
-                  <p className="text-xs text-slate-600 font-mono line-clamp-2">
+                  <p className="text-xs text-muted-foreground font-mono line-clamp-2">
                     {outcome.snippets[p] ?? ""}
                   </p>
                 </div>
               ))}
             </div>
           </div>
-          <p className="text-[11px] font-mono text-slate-400 break-all">
+          <p className="text-[11px] font-mono text-muted-foreground/70 break-all">
             → {baseName(file.name)}-pages-{pagesForFilename(outcome.pages)}.pdf
           </p>
           <Button
             type="button"
             disabled={working}
             onClick={() => onExtract(outcome.pages)}
-            className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white font-bold text-base"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base"
           >
             <Scissors aria-hidden="true" />
             Extract {outcome.pages.length} Found Pages
@@ -137,12 +137,12 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
 
       {outcome && outcome.pages.length === 0 && (
         outcome.pagesWithText === 0 ? (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-xs text-amber-800">
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 text-xs text-amber-700 dark:text-amber-400">
             This looks like a scanned document — it has no searchable text layer. Try Remove Blank
             Pages or Make It Fit instead.
           </div>
         ) : (
-          <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm text-slate-600">
+          <div className="rounded-lg bg-muted/50 border border-border p-4 text-sm text-muted-foreground">
             No pages contain “{outcome.query}”. Try a shorter word.
           </div>
         )

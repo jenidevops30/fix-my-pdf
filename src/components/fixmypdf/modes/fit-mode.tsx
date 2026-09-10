@@ -39,7 +39,7 @@ export function FitMode({ working, onRun }: FitModeProps) {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 font-semibold">
+        <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
           Step 1 • Byte Target
         </p>
         <h3 className="text-xl font-bold">What is the upload size limit?</h3>
@@ -55,14 +55,14 @@ export function FitMode({ working, onRun }: FitModeProps) {
             className={cn(
               "p-3 rounded-xl border-2 text-left transition-colors min-h-[44px]",
               preset === p.mb
-                ? "border-orange-500 bg-orange-50/30"
-                : "border-slate-200 hover:bg-slate-50"
+                ? "border-orange-500 bg-orange-500/10"
+                : "border-border hover:bg-muted/50"
             )}
           >
             <span className="block text-sm font-bold">{p.mb.toFixed(1)} MB</span>
-            <span className="block text-[11px] font-mono text-slate-500 mt-0.5">
+            <span className="block text-[11px] font-mono text-muted-foreground mt-0.5">
               {p.label}
-              {p.star && <span className="text-orange-600"> ★ Common</span>}
+              {p.star && <span className="text-orange-600 dark:text-orange-400"> ★ Common</span>}
             </span>
           </button>
         ))}
@@ -86,7 +86,7 @@ export function FitMode({ working, onRun }: FitModeProps) {
             className="h-12 pr-24 font-mono text-lg font-bold"
           />
           <span
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm pointer-events-none"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 font-mono text-sm pointer-events-none"
             aria-hidden="true"
           >
             MB MAX
@@ -103,7 +103,7 @@ export function FitMode({ working, onRun }: FitModeProps) {
           />
           <Label
             htmlFor="fit-strip-meta"
-            className="text-xs text-slate-600 font-normal cursor-pointer leading-snug"
+            className="text-xs text-muted-foreground font-normal cursor-pointer leading-snug"
           >
             Strip hidden tracking metadata & camera EXIF
           </Label>
@@ -116,7 +116,7 @@ export function FitMode({ working, onRun }: FitModeProps) {
           />
           <Label
             htmlFor="fit-grayscale"
-            className="text-xs text-slate-600 font-normal cursor-pointer leading-snug"
+            className="text-xs text-muted-foreground font-normal cursor-pointer leading-snug"
           >
             Convert to grayscale (scanned B&W docs compress dramatically)
           </Label>

@@ -268,7 +268,7 @@ export function FixMyPdfApp() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f8faff] text-slate-900">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
       <main className="w-full max-w-5xl mx-auto px-6 py-12 md:py-16 space-y-12">
         <Hero mode={mode} onModeChange={setMode} />
