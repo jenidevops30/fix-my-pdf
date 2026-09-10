@@ -143,6 +143,16 @@
   }
 }
 
+/* Reduced motion: disable non-essential decoration for users who ask for it.
+   (Functional spinners stay; the confetti burst checks useReducedMotion in JS.) */
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+  }
+}
+
 /* Slim, unobtrusive scrollbars for page grids and result lists */
 .slim-scrollbar::-webkit-scrollbar {
   width: 8px;

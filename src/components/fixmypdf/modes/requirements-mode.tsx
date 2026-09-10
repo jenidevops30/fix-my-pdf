@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { parseRequirements } from "@/lib/pdf/format";
+import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import type { RequirementsRunOptions } from "../types";
 
@@ -17,6 +18,7 @@ interface RequirementsModeProps {
 }
 
 export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
+  const { t } = useI18n();
   const [text, setText] = useState("");
   const [stripMetadata, setStripMetadata] = useState(true);
 
@@ -29,12 +31,10 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
     <div className="space-y-6">
       <header className="space-y-1">
         <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
-          Step 1 • Paste The Rules
+          {t("req_step")}
         </p>
-        <h3 className="text-xl font-bold">What does the website say?</h3>
-        <p className="text-xs text-muted-foreground">
-          Paste the upload instructions. We read them locally — no AI, just parsing.
-        </p>
+        <h3 className="text-xl font-bold">{t("req_question")}</h3>
+        <p className="text-xs text-muted-foreground">{t("req_sub")}</p>
       </header>
 
       <div className="space-y-3">
@@ -42,8 +42,8 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
           rows={4}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. The uploaded file must be a PDF, maximum size 2 MB, maximum 10 pages."
-          aria-label="Requirement text"
+          placeholder={t("req_placeholder")}
+          aria-label={t("req_text_aria")}
         />
         {reqs.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -60,7 +60,7 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
                   )}
                 >
                   {r.label}
-                  {!actionableChip && " · informational"}
+                  {!actionableChip && ` · ${t("req_informational")}`}
                 </Badge>
               );
             })}
@@ -68,8 +68,7 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
         )}
         {text.trim().length > 0 && actionable.length === 0 && (
           <p role="status" className="rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 p-3 text-xs">
-            No size or page limit detected yet — mention something like “under 2 MB” or “max 10
-            pages”.
+            {t("req_no_limit")}
           </p>
         )}
       </div>
@@ -84,18 +83,19 @@ export function RequirementsMode({ working, onRun }: RequirementsModeProps) {
           htmlFor="req-strip-meta"
           className="text-xs text-muted-foreground font-normal cursor-pointer leading-snug"
         >
-          Strip hidden tracking metadata
+          {t("req_strip_meta")}
         </Label>
       </div>
 
       <Button
         type="button"
+        data-primary-cta
         disabled={working || actionable.length === 0}
         onClick={() => onRun({ maxBytes, maxPages, grayscale: false, stripMetadata })}
         className="w-full h-12 bg-orange-600 hover:bg-orange-500 text-white font-bold text-base"
       >
         <CheckCheck aria-hidden="true" />
-        Make My File Fit
+        {t("req_cta")}
       </Button>
     </div>
   );

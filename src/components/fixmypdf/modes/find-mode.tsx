@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2, Scissors, Search } from "lucide-react";
 import type { EngineProgress, TextSearchOutcome } from "@/lib/pdf/engine";
 import { baseName, pagesForFilename } from "@/lib/pdf/format";
+import { useI18n } from "@/lib/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,14 +18,19 @@ interface FindModeProps {
 }
 
 export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [outcome, setOutcome] = useState<TextSearchOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<EngineProgress | null>(null);
+  // Enter inside the input fires the native form submit AND the global
+  // shortcut may click the submit button — this lock keeps the search single-flight.
+  const inFlightRef = useRef(false);
 
   const runSearch = async () => {
-    if (!query.trim() || searching) return;
+    if (!query.trim() || searching || inFlightRef.current) return;
+    inFlightRef.current = true;
     setSearching(true);
     setError(null);
     setOutcome(null);
@@ -33,8 +39,9 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
       const res = await onSearch(query, (p) => setProgress(p));
       setOutcome(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed.");
+      setError(err instanceof Error ? err.message : t("find_failed"));
     } finally {
+      inFlightRef.current = false;
       setSearching(false);
     }
   };
@@ -43,9 +50,9 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
     <div className="space-y-6">
       <header className="space-y-1">
         <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
-          Step 1 • Search Text
+          {t("find_step")}
         </p>
-        <h3 className="text-xl font-bold">Find pages containing a word</h3>
+        <h3 className="text-xl font-bold">{t("find_question")}</h3>
       </header>
 
       <form
@@ -56,15 +63,16 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
         className="flex gap-2"
       >
         <Input
-          aria-label="Search text"
-          placeholder="e.g. Policy Schedule"
+          aria-label={t("find_aria")}
+          placeholder={t("find_placeholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1 h-10"
         />
         <Button
           type="submit"
-          aria-label="Run search"
+          data-primary-cta
+          aria-label={t("find_search_aria")}
           disabled={searching || !query.trim()}
           className="h-10 bg-primary hover:bg-primary/90 text-primary-foreground"
         >
@@ -73,7 +81,7 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
           ) : (
             <Search aria-hidden="true" />
           )}
-          Search
+          {t("find_search")}
         </Button>
       </form>
 
@@ -82,10 +90,10 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
           <Progress
             value={progress?.percent ?? 5}
             className="bg-muted [&_[data-slot=progress-indicator]]:bg-orange-600 dark:[&_[data-slot=progress-indicator]]:bg-orange-500"
-            aria-label="Searching"
+            aria-label={t("find_searching_aria")}
           />
-          <p className="font-mono text-xs text-muted-foreground">
-            {progress ? `${progress.phase} · ${progress.detail ?? ""}` : "Searching pages…"}
+          <p className="font-mono text-xs text-muted-foreground" role="status">
+            {progress ? `${progress.phase} · ${progress.detail ?? ""}` : t("find_searching")}
           </p>
         </div>
       )}
@@ -101,10 +109,10 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
           <div className="rounded-lg border border-border bg-card overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/70">
               <span className="text-sm font-bold">
-                Found on {outcome.pages.length} pages · {outcome.matchCount} matches
+                {t("find_found_on", { pages: outcome.pages.length, matches: outcome.matchCount })}
               </span>
               <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent font-mono shrink-0">
-                {outcome.matchCount} hits
+                {t("find_hits", { n: outcome.matchCount })}
               </Badge>
             </div>
             <div className="max-h-64 overflow-y-auto slim-scrollbar divide-y divide-border/70 px-4">
@@ -130,7 +138,7 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
             className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base"
           >
             <Scissors aria-hidden="true" />
-            Extract {outcome.pages.length} Found Pages
+            {t("find_cta", { n: outcome.pages.length })}
           </Button>
         </div>
       )}
@@ -138,12 +146,11 @@ export function FindMode({ file, working, onSearch, onExtract }: FindModeProps) 
       {outcome && outcome.pages.length === 0 && (
         outcome.pagesWithText === 0 ? (
           <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4 text-xs text-amber-700 dark:text-amber-400">
-            This looks like a scanned document — it has no searchable text layer. Try Remove Blank
-            Pages or Make It Fit instead.
+            {t("find_scanned")}
           </div>
         ) : (
           <div className="rounded-lg bg-muted/50 border border-border p-4 text-sm text-muted-foreground">
-            No pages contain “{outcome.query}”. Try a shorter word.
+            {t("find_no_hits", { query: outcome.query })}
           </div>
         )
       )}

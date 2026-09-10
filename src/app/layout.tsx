@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Mono, DM_Sans, Jost } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -27,7 +27,10 @@ const jost = Jost({
   subsets: ["latin"],
 });
 
+const APP_URL = "https://fixmypdf.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: "FixMyPDF — Your PDF is wrong. We'll fix it.",
   description:
     "No toolboxes. Tell FixMyPDF the result you need — a size limit, the pages you keep, or the portal's rules — and the in-browser engine fixes your PDF. 100% private: files never leave your device.",
@@ -41,16 +44,53 @@ export const metadata: Metadata = {
     "file size limit",
   ],
   authors: [{ name: "FixMyPDF" }],
+  alternates: { canonical: "/" },
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
     title: "FixMyPDF — Your PDF is wrong. We'll fix it.",
     description:
       "Too big? Too many pages? The website says max 2 MB? Fix it in one click — entirely in your browser.",
+    url: APP_URL,
     siteName: "FixMyPDF",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "FixMyPDF — fix PDFs entirely in your browser with zero uploads",
+      },
+    ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "FixMyPDF — Your PDF is wrong. We'll fix it.",
+    description:
+      "Too big? Too many pages? The website says max 2 MB? Fix it in one click — entirely in your browser.",
+    images: ["/og-image.png"],
+  },
+  applicationName: "FixMyPDF",
+  appleWebApp: {
+    capable: true,
+    title: "FixMyPDF",
+    statusBarStyle: "black-translucent",
+  },
+  robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8faff" },
+    { media: "(prefers-color-scheme: dark)", color: "#060c1b" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({

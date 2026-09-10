@@ -108,3 +108,63 @@ Work Log:
 
 Stage Summary:
 - FixMyPDF now ships a first-class dark theme (navy brand, inverted CTAs) with a header toggle + system default, and the requested font system: DM Mono (technical voice) + DM Sans (body) + Jost (display headline). No engine/lib changes; all previous flows still browser-verified green in both themes.
+
+---
+Task ID: 8-a
+Agent: general-purpose sub agent (image/asset generation)
+Task: Brand icon + OG image generation and resizing
+
+Work Log:
+- Read worklog.md for brand context (navy #0b1329/#060c1b, orange #ea580c, emerald #059669, canvas #f8faff; no blue/indigo/purple). No app source code touched.
+- Invoked image-generation skill; generated both artworks via `z-ai image` CLI (generation succeeded, no fallback needed):
+  - App icon art (1024x1024): flat minimal orange drafting-compass X-cross mark with wrench joint on solid deep navy, generous padding, no text.
+  - OG background art (1344x768 landscape): white PDF sheet on right clamped by orange brackets + crosshair, floating pages, emerald check badge, blueprint grid, empty dark left half reserved for overlay text.
+- Saved raws to public/icons/icon-raw.png and public/icons/og-bg-raw.png. Note: the z-ai CLI emitted JPEG bytes despite .png names — normalized both raws to true PNG in place (same dims) with sharp before processing.
+- Created scripts/build-brand-assets.mjs (sharp, run via `bun scripts/build-brand-assets.mjs`):
+  - Icon ladder from icon-raw.png: icon-512.png (512), icon-192.png (192), apple-touch-icon.png (180), favicon-32.png (32) — all PNG, fit:"cover" guard.
+  - OG: og-bg-raw.png cover-cropped to exactly 1200x630, composited with a hand-authored SVG text overlay rendered by sharp (crisp vector typography, NOT AI text), all per spec: "FixMyPDF" 88px/700/#fff at x=72 (baseline 272, cap-top ≈210), "Your PDF is wrong." 54px/600/#fff, "We&#39;ll fix it." 54px/700/#f97316 (apostrophe XML-escaped), "100% in your browser &#183; zero uploads" 30px/#94a3b8 with extra spacing. Saved to public/og-image.png.
+  - Script self-verifies: re-reads every output via sharp metadata + fs stat, prints a table, exits non-zero on any format/dimension mismatch.
+- Verification (all green): `file` confirms valid PNG magic on all outputs; sharp metadata table OK; pixel-sampled sanity checks confirmed the SVG overlay really rasterized (white headline px, orange "We'll fix it." px, slate tagline px) and icon palette is on-brand (orange mark px at center, deep-navy px at corner). Re-ran build after raw normalization — stable results.
+
+Stage Summary:
+- PWA icon set + OG image shipped: public/icons/icon-512.png (512x512, 257 KB), public/icons/icon-192.png (192x192, 34 KB), public/icons/apple-touch-icon.png (180x180, 29 KB), public/icons/favicon-32.png (32x32, 1.2 KB), public/og-image.png (1200x630, 489 KB), plus raws icon-raw.png (1024x1024) and og-bg-raw.png (1344x768). Reproducible pipeline in scripts/build-brand-assets.mjs. Next agent: wire these into layout.tsx metadata (icons + openGraph) and webmanifest — deliberately NOT done here per task scope.
+
+---
+Task ID: 8-b
+Agent: general-purpose sub agent (i18n translation)
+Task: Translate i18n dictionaries (hi/es/fr/de/pt/zh)
+
+Work Log:
+- Read worklog.md for project context and src/lib/i18n/dictionaries/en.ts (source of truth, 247 keys, `Dict` type). No files touched outside src/lib/i18n/dictionaries/.
+- Created six locale dictionaries implementing `import type { Dict } from "./en"` with the MANDATORY `: Dict` annotation and en.ts key order preserved: hi.ts (Hindi), es.ts (Spanish/neutral LatAm tú), fr.ts (French/vous), de.ts (German/formal Sie), pt.ts (Brazilian Portuguese/você), zh.ts (Simplified Chinese/你).
+- Translation conventions applied: all {n} {mb} {size} {pct} {kept} {total} {remaining} {name} {query} {pages} {matches} placeholders preserved verbatim; brand/technical terms kept untranslated (FixMyPDF, PDF, MB, KB, ZIP, WebAssembly, WASM, pdf-lib, pdf.js, EXIF, B&W, Workday, Visa, Pro, Policy Schedule sample phrase); curly quotes “ ” everywhere incl. zh; ★/•/·/→/≤/—/…/600×600 glyphs and numbers kept; mode names cross-referenced consistently inside copy (e.g. find_scanned points to the translated "Remove Blank Pages"/"Make It Fit" names).
+- Wrote temp scripts/check-i18n.ts (key-sort parity + per-key {placeholder} parity against en) and ran `bun scripts/check-i18n.ts`; deleted the temp script afterwards.
+- Fixed one self-introduced syntax slip in zh.ts (missing comma after hero_title_2 while converting headline to Chinese 。 punctuation).
+
+Stage Summary:
+- Six dictionaries created: src/lib/i18n/dictionaries/{hi,es,fr,de,pt,zh}.ts — each 247/247 keys, placeholders verified identical to en.
+- Verification: `bunx tsc --noEmit 2>&1 | grep "src/lib/i18n"` → zero output (clean); parity script printed KEY PARITY OK + PLACEHOLDER PARITY OK for all 6 locales; English-only leftovers limited to brand terms (spot-scanned).
+- Notes for the UI agent: zh uses “ ” quotes too; fr/de keep “ ” per spec (not « »/„ “); "Policy Schedule" in find_placeholder intentionally untranslated so the bundled sample doc search reproduces; result_pages_out is a trailing fragment like en.
+
+---
+Task ID: 7-9 (main batch)
+Agent: main orchestrator (Z.ai Code)
+Task: Ship all remaining market-standard enhancements that fit the zero-backend / zero-database / zero-storage constraint
+
+Work Log:
+- Assessed prior state via worklog.md: engine + 6 modes + dark mode + fonts already shipped and E2E-verified. Filtered the 58-item enhancement list to client-only items and built the rest.
+- Task 8-a (subagent, general-purpose): generated brand assets via image-generation skill + sharp pipeline → public/icons/{icon-512,icon-192,apple-touch-icon,favicon-32}.png + public/og-image.png (1200x630, crisp SVG text overlay). Visually verified both.
+- Task 8-b (subagent, general-purpose): translated the UI dictionary to hi/es/fr/de/pt/zh with key+placeholder parity checks (247/247 keys each, tsc clean).
+- i18n system: src/lib/i18n/{config.ts,context.tsx,dictionaries/en.ts + 6 locales}. Locales are code-split dynamic imports; EN inlined as fallback; locale persisted in localStorage; <html lang> synced; hydration-stable (EN first paint, adopt after mount via rAF). LanguageSwitcher (shadcn Select) in header.
+- Wired t() into ALL fixmypdf components (header, hero, upload-zone, file-bar, workspace, result-panel, 6 modes, secondary-cards, how-it-works, privacy-ribbon, footer).
+- New sections: FAQ (accordion, 8 Qs) + Pricing (Free live vs Pro $4 coming-soon, one-time positioning, mailto waitlist) + LegalDialogs (Privacy Policy + Terms, zero-collection content, Radix Dialog) + FAQ data shared with JSON-LD.
+- SEO: metadataBase + canonical + local favicon/apple icons + manifest link + OG/Twitter images + viewport themeColor; JSON-LD (WebApplication, HowTo, FAQPage) server-rendered in page.tsx; public/sitemap.xml added (robots.txt existed).
+- PWA: public/manifest.webmanifest (icons any+maskable, standalone, brand colors) + public/sw.js (precache shell, cache-first immutable assets incl. pdfjs cmaps/worker, network-first navigations, versioned cache, never touches cross-origin) + PwaRegister (production-only).
+- Zero-upload proof: live cross-origin request counter (Resource Timing diff per fix) shown in privacy ribbon — "0 external cross-origin requests while fixing" with green pulse; turns amber if any external request ever appears.
+- Delight/polish: SuccessBurst confetti (framer-motion, honors useReducedMotion, auto-unmount); keyboard shortcuts (Enter → primary CTA via data-primary-cta, Esc → reset; guards for dialogs/textarea/native buttons; find-mode single-flight lock); auto-download preference (persisted, runs once per successful result); device-local fix counter in footer with singular/plural in all 7 locales; AppErrorBoundary wrapping the app from page.tsx.
+- Keep-mode quick-select row: All/Clear/Odd/Even/Every-2nd/Every-3rd; remove-mode gained Every-Nth chips.
+- Lint compliance for Next 16 react-hooks/set-state-in-effect: rAF-deferred post-mount reads, promise-callback dict loading, render-time derived state for confetti.
+- Deferred (documented, with reasons): batch multi-file queue (architectural change to single-file state model) and before/after page-level visual diff (extra engine render pass per result).
+
+Stage Summary:
+- Verification (Agent Browser E2E, all green): full render light+dark; sample load → Make It Fit ≤1.0MB → "Passed All Limits" 891KB (-67%) with honest pass ledger; download → footer counter + "0 external requests" proof; locale switch EN↔HI (html lang updates, persists across reload); dark mode round trip; FAQ accordion opens; privacy/terms dialog + Escape close; mobile 390x844 no h-scroll, footer natural; Enter/Esc shortcuts; manifest/sw/og/sitemap all 200; zero console/page errors; bun run lint + bunx tsc clean.

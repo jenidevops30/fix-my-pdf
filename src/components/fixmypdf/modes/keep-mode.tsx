@@ -9,6 +9,7 @@ import {
   pagesToCompactSpec,
   parsePageSpec,
 } from "@/lib/pdf/format";
+import { useI18n } from "@/lib/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ interface KeepModeProps {
 }
 
 export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtract }: KeepModeProps) {
+  const { t } = useI18n();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [specInput, setSpecInput] = useState("");
   const [specError, setSpecError] = useState<string | null>(null);
@@ -38,6 +40,8 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
   const pageCount = info.pageCount;
   const data = analysis.status === "done" ? analysis.data : undefined;
   const sorted = [...selected].sort((a, b) => a - b);
+
+  const allPages = () => Array.from({ length: pageCount }, (_, i) => i + 1);
 
   const applySet = (next: Set<number>) => {
     setSelected(next);
@@ -51,6 +55,20 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
     if (next.has(n)) next.delete(n);
     else next.add(n);
     applySet(next);
+  };
+
+  const parityPages = (parity: "odd" | "even") => {
+    const pages: number[] = [];
+    for (let n = 1; n <= pageCount; n++) {
+      if (parity === "odd" ? n % 2 === 1 : n % 2 === 0) pages.push(n);
+    }
+    return pages;
+  };
+
+  const everyNthPages = (step: number) => {
+    const pages: number[] = [];
+    for (let n = 1; n <= pageCount; n += step) pages.push(n);
+    return pages;
   };
 
   const onSpecChange = (value: string) => {
@@ -69,13 +87,16 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
     }
   };
 
+  const quickChip =
+    "rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors min-h-[32px]";
+
   return (
     <div className="space-y-6">
       <header className="space-y-1">
         <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
-          Step 1 • Pick Your Pages
+          {t("keep_step")}
         </p>
-        <h3 className="text-xl font-bold">Which pages do you need?</h3>
+        <h3 className="text-xl font-bold">{t("keep_question")}</h3>
       </header>
 
       {!data ? (
@@ -91,12 +112,12 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
           <Progress
             value={analysis.progress?.percent ?? 5}
             className="bg-muted [&_[data-slot=progress-indicator]]:bg-orange-600 dark:[&_[data-slot=progress-indicator]]:bg-orange-500"
-            aria-label="Analyzing pages"
+            aria-label={t("keep_analyzing_aria")}
           />
-          <p className="font-mono text-xs text-muted-foreground">
+          <p className="font-mono text-xs text-muted-foreground" role="status">
             {analysis.progress
               ? `${analysis.progress.phase} · ${analysis.progress.detail ?? ""}`
-              : "Analyzing pages…"}
+              : t("keep_analyzing")}
           </p>
         </div>
       ) : (
@@ -110,7 +131,7 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
                   key={n}
                   type="button"
                   aria-pressed={isSel}
-                  aria-label={`Select page ${n}`}
+                  aria-label={t("keep_select_aria", { n })}
                   onClick={() => toggle(n)}
                   className={cn(
                     "relative rounded-lg border overflow-hidden aspect-[3/4] bg-muted transition-all",
@@ -120,7 +141,7 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
                   )}
                 >
                   {thumb ? (
-                    <img src={thumb} alt={`Page ${n}`} className="w-full h-full object-cover" />
+                    <img src={thumb} alt={t("keep_page_alt", { n })} className="w-full h-full object-cover" />
                   ) : (
                     <Skeleton className="w-full h-full rounded-none" />
                   )}
@@ -139,7 +160,7 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-mono text-muted-foreground">Selected:</span>
+              <span className="text-sm font-mono text-muted-foreground">{t("keep_selected")}</span>
               <Badge
                 className={cn(
                   "font-mono max-w-full",
@@ -148,16 +169,19 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
                     : "bg-muted text-muted-foreground border-transparent"
                 )}
               >
-                <span className="truncate">{sorted.length ? pagesToCompactSpec(sorted) : "none"}</span>
+                <span className="truncate">{sorted.length ? pagesToCompactSpec(sorted) : t("keep_none")}</span>
               </Badge>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="h-8 text-xs"
-                onClick={() => applySet(new Set(Array.from({ length: pageCount }, (_, i) => i + 1)))}
+                onClick={() => applySet(new Set(allPages()))}
               >
-                Select all
+                {t("keep_all")}
               </Button>
               <Button
                 type="button"
@@ -166,14 +190,42 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
                 className="h-8 text-xs"
                 onClick={() => applySet(new Set())}
               >
-                Clear
+                {t("keep_clear")}
               </Button>
+              <button
+                type="button"
+                className={quickChip}
+                onClick={() => applySet(new Set(parityPages("odd")))}
+              >
+                {t("keep_odd")}
+              </button>
+              <button
+                type="button"
+                className={quickChip}
+                onClick={() => applySet(new Set(parityPages("even")))}
+              >
+                {t("keep_even")}
+              </button>
+              <button
+                type="button"
+                className={quickChip}
+                onClick={() => applySet(new Set(everyNthPages(2)))}
+              >
+                {t("keep_every", { n: 2 })}
+              </button>
+              <button
+                type="button"
+                className={quickChip}
+                onClick={() => applySet(new Set(everyNthPages(3)))}
+              >
+                {t("keep_every", { n: 3 })}
+              </button>
             </div>
 
             <div className="space-y-1.5">
               <Input
-                aria-label="Page numbers"
-                placeholder="e.g. 3, 7, 12, 19-23"
+                aria-label={t("keep_spec_aria")}
+                placeholder={t("keep_spec_placeholder")}
                 value={specInput}
                 onChange={(e) => onSpecChange(e.target.value)}
                 className="font-mono text-sm h-10"
@@ -194,12 +246,13 @@ export function KeepMode({ file, info, analysis, working, ensureAnalysis, onExtr
 
           <Button
             type="button"
+            data-primary-cta
             disabled={working || sorted.length === 0}
             onClick={() => onExtract(sorted)}
             className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base"
           >
             <Scissors aria-hidden="true" />
-            Extract {sorted.length} Pages
+            {t("keep_cta", { n: sorted.length })}
           </Button>
         </>
       )}

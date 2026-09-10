@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { detectBlankPages, type BasicInfo } from "@/lib/pdf/engine";
 import { pagesToCompactSpec, parsePageSpec } from "@/lib/pdf/format";
+import { useI18n } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ interface RemoveModeProps {
 }
 
 export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }: RemoveModeProps) {
+  const { t } = useI18n();
   const [spec, setSpec] = useState("");
 
   // The "Remove blank pages" quick action needs the ink scan — warm it up.
@@ -32,7 +34,7 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
     try {
       parsed = parsePageSpec(spec, info.pageCount);
     } catch (err) {
-      parseError = err instanceof Error ? err.message : "Invalid page list.";
+      parseError = err instanceof Error ? err.message : t("remove_invalid_list");
     }
   }
   const remaining = info.pageCount - parsed.length;
@@ -43,37 +45,46 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
     if (!analysis.data) return;
     const blanks = detectBlankPages(analysis.data, "normal");
     if (!blanks.length) {
-      toast.info("No blank pages found", {
-        description: "Nothing looked empty at normal sensitivity.",
+      toast.info(t("remove_no_blanks"), {
+        description: t("remove_no_blanks_desc"),
       });
       return;
     }
     setSpec(pagesToCompactSpec(blanks));
   };
 
-  const setParity = (parity: "odd" | "even") => {
+  const parityPages = (parity: "odd" | "even") => {
     const pages: number[] = [];
     for (let n = 1; n <= info.pageCount; n++) {
       if (parity === "odd" ? n % 2 === 1 : n % 2 === 0) pages.push(n);
     }
-    setSpec(pagesToCompactSpec(pages));
+    return pages;
   };
+
+  const everyNthPages = (step: number) => {
+    const pages: number[] = [];
+    for (let n = 1; n <= info.pageCount; n += step) pages.push(n);
+    return pages;
+  };
+
+  const quickChip =
+    "rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors disabled:opacity-50 min-h-[32px]";
 
   return (
     <div className="space-y-6">
       <header className="space-y-1">
         <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
-          Step 1 • Mark The Cuts
+          {t("remove_step")}
         </p>
-        <h3 className="text-xl font-bold">Which pages should go?</h3>
+        <h3 className="text-xl font-bold">{t("remove_question")}</h3>
       </header>
 
       <div className="space-y-2">
-        <Label htmlFor="remove-spec">Pages to remove</Label>
+        <Label htmlFor="remove-spec">{t("remove_label")}</Label>
         <Input
           id="remove-spec"
-          aria-label="Pages to remove"
-          placeholder="e.g. 1-3, 8, 14-17"
+          aria-label={t("remove_aria")}
+          placeholder={t("remove_placeholder")}
           value={spec}
           onChange={(e) => setSpec(e.target.value)}
           className="font-mono h-10"
@@ -81,39 +92,37 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">Quick actions:</span>
+        <span className="text-xs text-muted-foreground">{t("remove_quick")}</span>
         <button
           type="button"
           onClick={applyBlanks}
           disabled={!analysisDone}
           title={
             analysisDone
-              ? "Fill in the blank pages found by the ink scan"
-              : "Available once the page scan finishes"
+              ? t("remove_qa_blanks_title")
+              : t("remove_qa_blanks_pending")
           }
-          className="rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors disabled:opacity-50 min-h-[32px]"
+          className={quickChip}
         >
-          Remove blank pages
+          {t("remove_qa_blanks")}
         </button>
-        <button
-          type="button"
-          onClick={() => setParity("odd")}
-          className="rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors min-h-[32px]"
-        >
-          Remove odd pages
+        <button type="button" onClick={() => setSpec(pagesToCompactSpec(parityPages("odd")))} className={quickChip}>
+          {t("remove_qa_odd")}
         </button>
-        <button
-          type="button"
-          onClick={() => setParity("even")}
-          className="rounded-full border border-border px-3 py-1.5 text-xs text-foreground/80 hover:bg-muted/50 transition-colors min-h-[32px]"
-        >
-          Remove even pages
+        <button type="button" onClick={() => setSpec(pagesToCompactSpec(parityPages("even")))} className={quickChip}>
+          {t("remove_qa_even")}
+        </button>
+        <button type="button" onClick={() => setSpec(pagesToCompactSpec(everyNthPages(2)))} className={quickChip}>
+          {t("remove_qa_every", { n: 2 })}
+        </button>
+        <button type="button" onClick={() => setSpec(pagesToCompactSpec(everyNthPages(3)))} className={quickChip}>
+          {t("remove_qa_every", { n: 3 })}
         </button>
       </div>
 
       <div className="space-y-1">
         <p className="text-sm text-muted-foreground font-mono">
-          {remaining} of {info.pageCount} pages will remain
+          {t("remove_remaining", { remaining, total: info.pageCount })}
         </p>
         {parseError && (
           <p className="text-rose-600 dark:text-rose-400 text-xs" role="alert">
@@ -121,20 +130,19 @@ export function RemoveMode({ info, analysis, working, ensureAnalysis, onRemove }
           </p>
         )}
         {!parseError && removingAll && (
-          <p className="text-amber-600 dark:text-amber-400 text-xs">
-            A PDF needs at least one page — leave something behind.
-          </p>
+          <p className="text-amber-600 dark:text-amber-400 text-xs">{t("remove_min_one")}</p>
         )}
       </div>
 
       <Button
         type="button"
+        data-primary-cta
         disabled={working || parsed.length === 0 || removingAll}
         onClick={() => onRemove(parsed)}
         className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base"
       >
         <Trash2 aria-hidden="true" />
-        Remove {parsed.length} Pages
+        {t("remove_cta", { n: parsed.length })}
       </Button>
     </div>
   );

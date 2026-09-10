@@ -1,95 +1,69 @@
 "use client";
 
 import { Check, CheckCircle2, Download, X } from "lucide-react";
-import { toast } from "sonner";
 import type { CompressionPass } from "@/lib/pdf/engine";
-import { downloadBlob, formatBytes } from "@/lib/pdf/format";
+import { formatBytes } from "@/lib/pdf/format";
+import { useI18n } from "@/lib/i18n/context";
+import type { DictKey } from "@/lib/i18n/dictionaries/en";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { SuccessBurst } from "./success-burst";
 import type { JobResult, Mode } from "./types";
 
 type FitView = Extract<JobResult, { kind: "fit" }>;
 type PagesView = Extract<JobResult, { kind: "pages" }>;
 
-const IDLE_PROMISES: Record<Mode, string[]> = {
-  fit: [
-    "Metadata stripped first — text stays selectable",
-    "Deterministic five-step raster ladder",
-    "Stops at the first pass that fits",
-  ],
-  keep: [
-    "Visual grid with live page thumbnails",
-    "Type specs like 3, 7, 12, 19-23",
-    "Structure copied losslessly page by page",
-  ],
-  requirements: [
-    "Pasted rules parsed locally — no AI involved",
-    "Strictest size and page limit wins",
-    "Trim to the page cap, then compress",
-  ],
-  blank: [
-    "Ink-density scan of every single page",
-    "Conservative, normal and lenient levels",
-    "Nothing is removed until you confirm",
-  ],
-  remove: [
-    "Ranges like 1-3, 8, 14-17 supported",
-    "Quick cuts for blanks, odd and even pages",
-    "Live preview of what remains",
-  ],
-  find: [
-    "Searches the text layer of every page",
-    "Snippet shown for each hit",
-    "Extract all hits in one click",
-  ],
+const IDLE_PROMISES: Record<Mode, [DictKey, DictKey, DictKey]> = {
+  fit: ["idle_fit_1", "idle_fit_2", "idle_fit_3"],
+  keep: ["idle_keep_1", "idle_keep_2", "idle_keep_3"],
+  requirements: ["idle_requirements_1", "idle_requirements_2", "idle_requirements_3"],
+  blank: ["idle_blank_1", "idle_blank_2", "idle_blank_3"],
+  remove: ["idle_remove_1", "idle_remove_2", "idle_remove_3"],
+  find: ["idle_find_1", "idle_find_2", "idle_find_3"],
 };
 
-function headlineFor(result: JobResult): string {
-  switch (result.kind) {
-    case "idle":
-      return "Nothing processed yet";
-    case "working":
-      return "Engine running";
-    case "fit":
-      return result.contextLabel;
-    case "pages":
-      return result.headline;
-    case "error":
-      return "Something went wrong";
-  }
-}
-
 function StatusBadge({ result }: { result: JobResult }) {
+  const { t } = useI18n();
   switch (result.kind) {
     case "idle":
       return (
         <Badge className="bg-muted text-muted-foreground border-transparent">
-          Awaiting instructions
+          {t("result_awaiting")}
         </Badge>
       );
     case "working":
       return (
         <Badge className="bg-muted text-foreground border-transparent">
           <span className="size-1.5 rounded-full bg-foreground animate-pulse" aria-hidden="true" />
-          Working…
+          {t("result_working")}
         </Badge>
       );
     case "fit":
       return result.result.success ? (
         <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent">
-          Passed All Limits
+          {t("result_passed")}
         </Badge>
       ) : (
-        <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 border-transparent">Closest Match Found</Badge>
+        <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 border-transparent">
+          {t("result_closest")}
+        </Badge>
       );
     case "pages":
       return (
-        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent">Cut Complete</Badge>
+        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300 border-transparent">
+          {t("result_cut")}
+        </Badge>
       );
     case "error":
-      return <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 border-transparent">Error</Badge>;
+      return (
+        <Badge className="bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 border-transparent">
+          {t("result_error_badge")}
+        </Badge>
+      );
   }
 }
 
@@ -121,6 +95,7 @@ function PassRow({ pass, emphasized }: { pass: CompressionPass; emphasized: bool
 }
 
 function FitBody({ r }: { r: FitView }) {
+  const { t } = useI18n();
   const res = r.result;
   // "Too Large" is only truthful when a byte target actually existed and was exceeded.
   const firstFit = r.targetBytes === undefined ? true : res.originalSize <= r.targetBytes;
@@ -138,10 +113,10 @@ function FitBody({ r }: { r: FitView }) {
     <div className="space-y-5">
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className="text-muted-foreground">Original File</span>
+          <span className="text-muted-foreground">{t("result_original")}</span>
           <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
             {formatBytes(res.originalSize)}
-            {!firstFit && " (Too Large)"}
+            {!firstFit && ` ${t("result_too_large")}`}
           </span>
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden" aria-hidden="true">
@@ -153,7 +128,7 @@ function FitBody({ r }: { r: FitView }) {
         <div className="flex items-center justify-between gap-2 text-xs">
           <span className="text-muted-foreground flex items-center gap-1.5">
             <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
-            Fixed Output
+            {t("result_fixed")}
           </span>
           <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
             {formatBytes(res.size)} (-{pct}%)
@@ -175,14 +150,12 @@ function FitBody({ r }: { r: FitView }) {
 
       {!res.success && (
         <p className="rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 p-3 text-xs">
-          We could not get under the limit without hurting readability. The smallest safe version
-          is attached.
+          {t("result_best_effort")}
         </p>
       )}
       {res.trimmedToPages !== undefined && (
         <p className="text-xs text-muted-foreground">
-          Trimmed to the first {res.trimmedToPages} of {res.pagesBeforeTrim} pages (keep-only
-          step).
+          {t("result_trimmed", { kept: res.trimmedToPages, total: res.pagesBeforeTrim ?? 0 })}
         </p>
       )}
     </div>
@@ -190,6 +163,7 @@ function FitBody({ r }: { r: FitView }) {
 }
 
 function PagesBody({ r }: { r: PagesView }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-5">
       <ul className="space-y-1.5">
@@ -202,29 +176,54 @@ function PagesBody({ r }: { r: PagesView }) {
       </ul>
       <div className="rounded-lg bg-card border border-border p-5 text-center">
         <div className="text-4xl font-extrabold">{r.pagesOut}</div>
-        <div className="text-xs text-muted-foreground mt-1">pages in the new file</div>
+        <div className="text-xs text-muted-foreground mt-1">{t("result_pages_out")}</div>
       </div>
     </div>
   );
 }
 
-function DownloadFooter({ blob, filename }: { blob: Blob; filename: string }) {
+interface DownloadFooterProps {
+  blob: Blob;
+  filename: string;
+  autoDownload: boolean;
+  onAutoDownloadChange: (value: boolean) => void;
+  onDownload: (blob: Blob, filename: string) => void;
+}
+
+function DownloadFooter({
+  blob,
+  filename,
+  autoDownload,
+  onAutoDownloadChange,
+  onDownload,
+}: DownloadFooterProps) {
+  const { t } = useI18n();
   const label = filename.length > 28 ? "Fixed PDF" : filename;
   return (
     <div className="space-y-2">
       <Button
         type="button"
-        onClick={() => {
-          downloadBlob(blob, filename);
-          toast.success("Download started", { description: filename });
-        }}
+        onClick={() => onDownload(blob, filename)}
         className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
       >
         <Download aria-hidden="true" />
-        Download {label}
+        {t("result_download", { name: label })}
       </Button>
+      <div className="flex items-center justify-center gap-2 min-h-6">
+        <Checkbox
+          id="auto-download"
+          checked={autoDownload}
+          onCheckedChange={(v) => onAutoDownloadChange(v === true)}
+        />
+        <Label
+          htmlFor="auto-download"
+          className="text-[11px] text-muted-foreground font-normal cursor-pointer leading-snug font-mono"
+        >
+          {t("result_auto_download")}
+        </Label>
+      </div>
       <p className="text-center text-[11px] font-mono text-muted-foreground/70">
-        No watermark • Processed privately in browser memory
+        {t("result_download_note")}
       </p>
     </div>
   );
@@ -233,10 +232,40 @@ function DownloadFooter({ blob, filename }: { blob: Blob; filename: string }) {
 interface ResultPanelProps {
   result: JobResult;
   mode: Mode;
+  /** Increments on every successful fix — drives the confetti burst. */
+  successNonce: number;
+  autoDownload: boolean;
+  onAutoDownloadChange: (value: boolean) => void;
+  onDownload: (blob: Blob, filename: string) => void;
   onReset: () => void;
 }
 
-export function ResultPanel({ result, mode, onReset }: ResultPanelProps) {
+export function ResultPanel({
+  result,
+  mode,
+  successNonce,
+  autoDownload,
+  onAutoDownloadChange,
+  onDownload,
+  onReset,
+}: ResultPanelProps) {
+  const { t } = useI18n();
+
+  const headline = (() => {
+    switch (result.kind) {
+      case "idle":
+        return t("result_idle_title");
+      case "working":
+        return t("result_working_title");
+      case "fit":
+        return result.contextLabel;
+      case "pages":
+        return result.headline;
+      case "error":
+        return t("result_error_title");
+    }
+  })();
+
   const downloadable =
     result.kind === "fit"
       ? { blob: result.result.blob, filename: result.result.filename }
@@ -246,39 +275,42 @@ export function ResultPanel({ result, mode, onReset }: ResultPanelProps) {
 
   return (
     <aside
-      aria-label="Verification and download"
+      aria-label={t("result_panel_label")}
       aria-live="polite"
-      className="rounded-xl bg-background border border-border p-6 sm:p-7 flex flex-col justify-between gap-6 min-h-[420px]"
+      className="relative rounded-xl bg-background border border-border p-6 sm:p-7 flex flex-col justify-between gap-6 min-h-[420px]"
     >
+      <SuccessBurst burstKey={successNonce} />
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <span className="font-mono text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-            Verification Engine
+            {t("result_engine")}
           </span>
           <StatusBadge result={result} />
         </div>
-        <h4 className="text-base font-bold">{headlineFor(result)}</h4>
+        <h4 className="text-base font-bold" role="status">
+          {headline}
+        </h4>
 
         {result.kind === "idle" && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Tell the engine what to do on the left. Every fix is verified against your exact
-              requirement before download.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("result_idle_lead")}</p>
             <ul className="space-y-1.5">
-              {IDLE_PROMISES[mode].map((line) => (
+              {IDLE_PROMISES[mode].map((key) => (
                 <li
-                  key={line}
+                  key={key}
                   className="flex items-start gap-2 font-mono text-xs text-muted-foreground"
                 >
                   <span
                     className="mt-1.5 size-1 rounded-full bg-muted-foreground/60 shrink-0"
                     aria-hidden="true"
                   />
-                  {line}
+                  {t(key)}
                 </li>
               ))}
             </ul>
+            <p className="text-[11px] font-mono text-muted-foreground/60 pt-1">
+              {t("result_shortcuts_hint")}
+            </p>
           </div>
         )}
 
@@ -287,9 +319,11 @@ export function ResultPanel({ result, mode, onReset }: ResultPanelProps) {
             <Progress
               value={result.percent}
               className="bg-muted [&_[data-slot=progress-indicator]]:bg-orange-600 dark:[&_[data-slot=progress-indicator]]:bg-orange-500"
-              aria-label={`Progress: ${result.percent}%`}
+              aria-label={t("result_progress_aria", { n: result.percent })}
             />
-            <p className="font-mono text-xs text-muted-foreground">{result.phase}</p>
+            <p className="font-mono text-xs text-muted-foreground" role="status">
+              {result.phase}
+            </p>
             {result.detail && <p className="text-[11px] text-muted-foreground/70">{result.detail}</p>}
           </div>
         )}
@@ -306,14 +340,20 @@ export function ResultPanel({ result, mode, onReset }: ResultPanelProps) {
               {result.message}
             </div>
             <Button type="button" variant="outline" size="sm" onClick={onReset}>
-              Try again
+              {t("result_try_again")}
             </Button>
           </div>
         )}
       </div>
 
       {downloadable && (
-        <DownloadFooter blob={downloadable.blob} filename={downloadable.filename} />
+        <DownloadFooter
+          blob={downloadable.blob}
+          filename={downloadable.filename}
+          autoDownload={autoDownload}
+          onAutoDownloadChange={onAutoDownloadChange}
+          onDownload={onDownload}
+        />
       )}
     </aside>
   );

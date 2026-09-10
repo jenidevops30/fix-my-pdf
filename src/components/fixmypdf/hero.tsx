@@ -12,15 +12,17 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
+import type { DictKey } from "@/lib/i18n/dictionaries/en";
 import type { Mode } from "./types";
 
-const MODES: Array<{ id: Mode; label: string; icon: LucideIcon }> = [
-  { id: "fit", label: "Make It Fit (Target Limit)", icon: Shrink },
-  { id: "keep", label: "Keep Specific Pages", icon: Scissors },
-  { id: "requirements", label: "“The website says...”", icon: ClipboardList },
-  { id: "blank", label: "Remove Blank Pages", icon: Wand2 },
-  { id: "remove", label: "Remove Pages", icon: Trash2 },
-  { id: "find", label: "Find Pages With a Word", icon: TextSearch },
+const MODES: Array<{ id: Mode; labelKey: DictKey; icon: LucideIcon }> = [
+  { id: "fit", labelKey: "mode_fit", icon: Shrink },
+  { id: "keep", labelKey: "mode_keep", icon: Scissors },
+  { id: "requirements", labelKey: "mode_requirements", icon: ClipboardList },
+  { id: "blank", labelKey: "mode_blank", icon: Wand2 },
+  { id: "remove", labelKey: "mode_remove", icon: Trash2 },
+  { id: "find", labelKey: "mode_find", icon: TextSearch },
 ];
 
 interface HeroProps {
@@ -29,6 +31,8 @@ interface HeroProps {
 }
 
 export function Hero({ mode, onModeChange }: HeroProps) {
+  const { t } = useI18n();
+
   return (
     <section aria-label="FixMyPDF introduction" className="max-w-3xl mx-auto space-y-4 text-center">
       <Badge
@@ -36,22 +40,19 @@ export function Hero({ mode, onModeChange }: HeroProps) {
         className="bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400 font-mono text-xs gap-1.5 px-3 py-1"
       >
         <Zap className="size-3.5 text-orange-600 dark:text-orange-400" aria-hidden="true" />
-        Deterministic Portal Triage
+        {t("hero_badge")}
       </Badge>
       <h1 className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight">
-        Your PDF is wrong. <br className="hidden sm:inline" />
-        We’ll fix it.
+        {t("hero_title_1")} <br className="hidden sm:inline" />
+        <span className="text-orange-600 dark:text-orange-400">{t("hero_title_2")}</span>
       </h1>
-      <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-        No complicated toolboxes. Tell us the hard upload limit or the pages you need, and our
-        browser engine safely resizes and trims it — nothing is ever uploaded.
-      </p>
+      <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t("hero_sub")}</p>
       <div
         role="tablist"
-        aria-label="Choose a fix"
+        aria-label={t("hero_choose_aria")}
         className="pt-4 flex flex-wrap justify-center gap-2"
       >
-        {MODES.map(({ id, label, icon: Icon }) => {
+        {MODES.map(({ id, labelKey, icon: Icon }) => {
           const active = mode === id;
           return (
             <button
@@ -67,7 +68,7 @@ export function Hero({ mode, onModeChange }: HeroProps) {
               )}
             >
               <Icon className={cn("size-4", active && "text-orange-400")} aria-hidden="true" />
-              {label}
+              {t(labelKey)}
             </button>
           );
         })}

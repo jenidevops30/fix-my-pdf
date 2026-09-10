@@ -18,10 +18,26 @@ interface WorkspaceProps {
   mode: Mode;
   result: JobResult;
   analysis: AnalysisState;
+  /** Increments on every successful fix — drives the confetti burst. */
+  successNonce: number;
+  autoDownload: boolean;
+  onAutoDownloadChange: (value: boolean) => void;
+  onDownload: (blob: Blob, filename: string) => void;
   callbacks: WorkspaceCallbacks;
 }
 
-export function Workspace({ file, info, mode, result, analysis, callbacks }: WorkspaceProps) {
+export function Workspace({
+  file,
+  info,
+  mode,
+  result,
+  analysis,
+  successNonce,
+  autoDownload,
+  onAutoDownloadChange,
+  onDownload,
+  callbacks,
+}: WorkspaceProps) {
   const working = result.kind === "working";
 
   return (
@@ -79,7 +95,15 @@ export function Workspace({ file, info, mode, result, analysis, callbacks }: Wor
                 />
               )}
             </div>
-            <ResultPanel result={result} mode={mode} onReset={callbacks.onResetResult} />
+            <ResultPanel
+              result={result}
+              mode={mode}
+              successNonce={successNonce}
+              autoDownload={autoDownload}
+              onAutoDownloadChange={onAutoDownloadChange}
+              onDownload={onDownload}
+              onReset={callbacks.onResetResult}
+            />
           </div>
         </>
       )}

@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
+import type { DictKey } from "@/lib/i18n/dictionaries/en";
 import type { Mode } from "./types";
 
 interface SecondaryCardsProps {
@@ -59,6 +61,8 @@ function ModeCard({ id, active, icon: Icon, title, body, cta, onPick, children }
 }
 
 export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
+  const { t } = useI18n();
+
   const pick = (m: Mode) => {
     onModeChange(m);
     document.getElementById("workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -67,23 +71,23 @@ export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
   return (
     <section aria-label="Other surgical solutions" className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-2xl font-bold">Other Surgical Solutions</h2>
-        <p className="text-sm text-muted-foreground">
-          Pick the exact fix you need — no settings maze.
-        </p>
+        <h2 className="text-2xl font-bold">{t("sec_heading")}</h2>
+        <p className="text-sm text-muted-foreground">{t("sec_sub")}</p>
       </div>
       <div className="grid md:grid-cols-3 gap-6">
         <ModeCard
           id="keep"
           active={mode === "keep"}
           icon={Scissors}
-          title="“I only need certain pages”"
-          body="Extract signature pages or tax tables with a visual page picker."
-          cta="Open Page Picker →"
+          title={t("sec_keep_title")}
+          body={t("sec_keep_body")}
+          cta={t("sec_keep_cta")}
           onPick={pick}
         >
           <div className="bg-muted/50 border border-border rounded-lg p-3 font-mono text-xs space-y-1">
-            <span className="block text-[10px] uppercase text-muted-foreground/80">Selected pages:</span>
+            <span className="block text-[10px] uppercase text-muted-foreground/80">
+              {t("sec_keep_preview_label")}
+            </span>
             <span className="block font-bold">3, 7, 12, 14-16</span>
           </div>
         </ModeCard>
@@ -92,9 +96,9 @@ export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
           id="requirements"
           active={mode === "requirements"}
           icon={ClipboardList}
-          title="“The website says...”"
-          body="Paste portal instructions; we detect size and page limits locally."
-          cta="Paste The Rules →"
+          title={t("sec_req_title")}
+          body={t("sec_req_body")}
+          cta={t("sec_req_cta")}
           onPick={pick}
         >
           <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-2">
@@ -116,15 +120,17 @@ export function SecondaryCards({ mode, onModeChange }: SecondaryCardsProps) {
           id="blank"
           active={mode === "blank"}
           icon={Wand2}
-          title="Excise Blank Pages"
-          body="Detect empty scanner feeder pages with ink-density analysis."
-          cta="Scan For Blanks →"
+          title={t("sec_blank_title")}
+          body={t("sec_blank_body")}
+          cta={t("sec_blank_cta")}
           onPick={pick}
         >
           <div className="bg-muted/50 border border-border rounded-lg p-3 space-y-1">
-            <span className="block text-xs font-bold text-orange-600 dark:text-orange-400">6 blanks found</span>
+            <span className="block text-xs font-bold text-orange-600 dark:text-orange-400">
+              {t("sec_blank_found")}
+            </span>
             <span className="block font-mono text-[10px] text-muted-foreground">
-              Pages 4, 9, 11, 18, 22, 30 will be cut
+              {t("sec_blank_cut")}
             </span>
           </div>
         </ModeCard>

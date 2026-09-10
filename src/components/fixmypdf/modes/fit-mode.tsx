@@ -7,13 +7,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { mbToBytes } from "@/lib/pdf/format";
+import { useI18n } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import type { FitRunOptions } from "../types";
 
-const PRESETS: Array<{ mb: number; label: string; star?: boolean }> = [
-  { mb: 1, label: "Gov / Visa" },
-  { mb: 2, label: "Workday / HR" },
-  { mb: 5, label: "University", star: true },
+const PRESETS: Array<{ mb: number; labelKey: "fit_preset_1" | "fit_preset_2" | "fit_preset_3"; star?: boolean }> = [
+  { mb: 1, labelKey: "fit_preset_1" },
+  { mb: 2, labelKey: "fit_preset_2" },
+  { mb: 5, labelKey: "fit_preset_3", star: true },
 ];
 
 interface FitModeProps {
@@ -22,6 +23,7 @@ interface FitModeProps {
 }
 
 export function FitMode({ working, onRun }: FitModeProps) {
+  const { t } = useI18n();
   const [mbText, setMbText] = useState("5");
   const [preset, setPreset] = useState<number | null>(null);
   const [stripMetadata, setStripMetadata] = useState(true);
@@ -40,9 +42,9 @@ export function FitMode({ working, onRun }: FitModeProps) {
     <div className="space-y-6">
       <header className="space-y-1">
         <p className="font-mono text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400 font-semibold">
-          Step 1 • Byte Target
+          {t("fit_step")}
         </p>
-        <h3 className="text-xl font-bold">What is the upload size limit?</h3>
+        <h3 className="text-xl font-bold">{t("fit_question")}</h3>
       </header>
 
       <div className="grid grid-cols-3 gap-2.5">
@@ -61,15 +63,15 @@ export function FitMode({ working, onRun }: FitModeProps) {
           >
             <span className="block text-sm font-bold">{p.mb.toFixed(1)} MB</span>
             <span className="block text-[11px] font-mono text-muted-foreground mt-0.5">
-              {p.label}
-              {p.star && <span className="text-orange-600 dark:text-orange-400"> ★ Common</span>}
+              {t(p.labelKey)}
+              {p.star && <span className="text-orange-600 dark:text-orange-400"> {t("fit_common")}</span>}
             </span>
           </button>
         ))}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="fit-max-mb">Or type an exact limit</Label>
+        <Label htmlFor="fit-max-mb">{t("fit_exact_label")}</Label>
         <div className="relative">
           <Input
             id="fit-max-mb"
@@ -82,7 +84,7 @@ export function FitMode({ working, onRun }: FitModeProps) {
               setMbText(e.target.value);
               setPreset(null);
             }}
-            aria-label="Maximum size in megabytes"
+            aria-label={t("fit_mb_aria")}
             className="h-12 pr-24 font-mono text-lg font-bold"
           />
           <span
@@ -105,7 +107,7 @@ export function FitMode({ working, onRun }: FitModeProps) {
             htmlFor="fit-strip-meta"
             className="text-xs text-muted-foreground font-normal cursor-pointer leading-snug"
           >
-            Strip hidden tracking metadata & camera EXIF
+            {t("fit_strip_meta")}
           </Label>
         </div>
         <div className="flex items-center gap-2.5 min-h-6">
@@ -118,19 +120,20 @@ export function FitMode({ working, onRun }: FitModeProps) {
             htmlFor="fit-grayscale"
             className="text-xs text-muted-foreground font-normal cursor-pointer leading-snug"
           >
-            Convert to grayscale (scanned B&W docs compress dramatically)
+            {t("fit_grayscale")}
           </Label>
         </div>
       </div>
 
       <Button
         type="button"
+        data-primary-cta
         disabled={working || !valid}
         onClick={() => onRun({ targetBytes: mbToBytes(mb), grayscale, stripMetadata })}
         className="w-full h-12 bg-orange-600 hover:bg-orange-500 text-white font-bold text-base"
       >
         <Zap aria-hidden="true" />
-        Make It Fit Under {display} MB
+        {t("fit_cta", { mb: display })}
       </Button>
     </div>
   );

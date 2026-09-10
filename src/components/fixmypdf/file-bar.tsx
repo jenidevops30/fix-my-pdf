@@ -3,6 +3,7 @@
 import { FileText, Repeat2 } from "lucide-react";
 import type { BasicInfo } from "@/lib/pdf/engine";
 import { formatBytes } from "@/lib/pdf/format";
+import { useI18n } from "@/lib/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -13,6 +14,7 @@ interface FileBarProps {
 }
 
 export function FileBar({ file, info, onClearFile }: FileBarProps) {
+  const { t } = useI18n();
   const overTwoMb = file.size > 2 * 1024 * 1024;
 
   return (
@@ -25,15 +27,15 @@ export function FileBar({ file, info, onClearFile }: FileBarProps) {
           <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
             <span className="font-bold text-base break-all">{file.name}</span>
             <Badge className="bg-muted text-muted-foreground font-mono text-[11px] border-transparent">
-              {info.pageCount} Pages
+              {t("file_pages", { n: info.pageCount })}
             </Badge>
           </div>
           <p className="text-xs font-mono text-muted-foreground mt-0.5">
-            Current size:{" "}
+            {t("file_current_size")}{" "}
             <span className={overTwoMb ? "text-rose-600 dark:text-rose-400 font-semibold" : "text-emerald-600 dark:text-emerald-400 font-semibold"}>
               {formatBytes(file.size)}
             </span>
-            {info.encrypted && <span className="text-amber-600 dark:text-amber-400"> · password-protected</span>}
+            {info.encrypted && <span className="text-amber-600 dark:text-amber-400"> · {t("file_encrypted")}</span>}
           </p>
         </div>
       </div>
@@ -45,7 +47,7 @@ export function FileBar({ file, info, onClearFile }: FileBarProps) {
         className="shrink-0 self-start sm:self-auto"
       >
         <Repeat2 aria-hidden="true" />
-        Switch file
+        {t("file_switch")}
       </Button>
     </div>
   );
