@@ -8,12 +8,14 @@
  *  - Network-first for navigations with cache fallback (fresh HTML when online).
  * Everything stays on-device — this SW never talks to third parties.
  */
-const VERSION = "fixmypdf-v1";
+const VERSION = "fixmypdf-v2";
 const PRECACHE = ["/"];
 
 const CACHE_FIRST_PREFIXES = [
   "/_next/static/",
   "/pdfjs/",
+  "/tesseract/",
+  "/tessdata/",
   "/pdf.worker.min.mjs",
   "/icons/",
   "/samples/",

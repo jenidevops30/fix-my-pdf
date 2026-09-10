@@ -105,6 +105,8 @@ export const fr: Dict = {
   fit_strip_meta: "Retirer les métadonnées de suivi cachées et l’EXIF de l’appareil photo",
   fit_grayscale: "Convertir en niveaux de gris (les documents B&W scannés se compressent de façon spectaculaire)",
   fit_cta: "Faire tenir en moins de {mb} MB",
+  fit_save_target: "Enregistrer la cible",
+  fit_saved_toast: "{mb} MB enregistrés sur cet appareil",
 
   /* ---------------------------- requirements mode ---------------------------- */
   req_step: "Étape 1 • Collez les règles",

@@ -105,6 +105,8 @@ export const zh: Dict = {
   fit_strip_meta: "剥离隐藏的追踪元数据与相机 EXIF",
   fit_grayscale: "转为灰度（扫描的 B&W 文档压缩效果惊人）",
   fit_cta: "压到 {mb} MB 以内",
+  fit_save_target: "保存目标",
+  fit_saved_toast: "已将 {mb} MB 保存到此设备",
 
   /* ---------------------------- requirements mode ---------------------------- */
   req_step: "第 1 步 • 粘贴规则",

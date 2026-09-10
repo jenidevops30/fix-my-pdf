@@ -104,6 +104,8 @@ export const en = {
   fit_strip_meta: "Strip hidden tracking metadata & camera EXIF",
   fit_grayscale: "Convert to grayscale (scanned B&W docs compress dramatically)",
   fit_cta: "Make It Fit Under {mb} MB",
+  fit_save_target: "Save target",
+  fit_saved_toast: "Saved {mb} MB to this device",
 
   /* ---------------------------- requirements mode ---------------------------- */
   req_step: "Step 1 • Paste The Rules",

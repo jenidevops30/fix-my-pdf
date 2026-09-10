@@ -105,6 +105,8 @@ export const de: Dict = {
   fit_strip_meta: "Versteckte Tracking-Metadaten & Kamera-EXIF entfernen",
   fit_grayscale: "In Graustufen umwandeln (gescannte B&W-Dokumente komprimieren dramatisch)",
   fit_cta: "Unter {mb} MB bringen",
+  fit_save_target: "Ziel speichern",
+  fit_saved_toast: "{mb} MB auf diesem Gerät gespeichert",
 
   /* ---------------------------- requirements mode ---------------------------- */
   req_step: "Schritt 1 • Regeln einfügen",

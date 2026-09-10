@@ -105,6 +105,8 @@ export const pt: Dict = {
   fit_strip_meta: "Remover metadados ocultos de rastreamento e EXIF da câmera",
   fit_grayscale: "Converter para escala de cinza (documentos B&W escaneados comprimem drasticamente)",
   fit_cta: "Fazer Caber Abaixo de {mb} MB",
+  fit_save_target: "Salvar meta",
+  fit_saved_toast: "{mb} MB salvos neste dispositivo",
 
   /* ---------------------------- requirements mode ---------------------------- */
   req_step: "Passo 1 • Cole as Regras",

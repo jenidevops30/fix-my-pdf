@@ -168,3 +168,145 @@ Work Log:
 
 Stage Summary:
 - Verification (Agent Browser E2E, all green): full render light+dark; sample load → Make It Fit ≤1.0MB → "Passed All Limits" 891KB (-67%) with honest pass ledger; download → footer counter + "0 external requests" proof; locale switch EN↔HI (html lang updates, persists across reload); dark mode round trip; FAQ accordion opens; privacy/terms dialog + Escape close; mobile 390x844 no h-scroll, footer natural; Enter/Esc shortcuts; manifest/sw/og/sitemap all 200; zero console/page errors; bun run lint + bunx tsc clean.
+
+---
+Task ID: 10-h
+Agent: general-purpose sub agent (presets + sw)
+Task: Custom device-local target presets in fit-mode + sw.js OCR asset caching
+Work Log:
+- Read worklog.md, fit-mode.tsx, en.ts (+ config.ts/context.tsx for the Dict type + rAF hydration pattern), and public/sw.js before editing.
+- sw.js (Task 2): added "/tesseract/" and "/tessdata/" to CACHE_FIRST_PREFIXES — the existing fetch handler already gates on same-origin GET, so they now get the identical cache-first treatment as the pdfjs assets; bumped VERSION "fixmypdf-v1" → "fixmypdf-v2" so installed clients re-install and prune old caches. Network-first navigations and everything else untouched (verified by re-read).
+- i18n: added `fit_save_target` ("Save target") and `fit_saved_toast` ("Saved {mb} MB to this device") immediately after `fit_cta` in en.ts and at the identical position in hi/es/fr/de/pt/zh — {mb} placeholder preserved verbatim everywhere, MB kept untranslated per dictionary conventions, key order stable, all files keep the `: Dict` annotation (en now 250 keys, full parity in all locales).
+- fit-mode.tsx: device-local custom presets under localStorage key "fixmypdf:custom-presets" (JSON array of MB numbers, max 5, sorted ascending, deduped, 0.1 MB precision, validated 0.1..100; try/catch-safe read/write helpers). Loaded into state inside a requestAnimationFrame callback after first paint (never read during render) — same hydration-stable pattern as the app-level prefs in app.tsx.
+- fit-mode.tsx UI: small outline size="sm" Button with Star icon labeled via `fit_save_target` next to the MB input; clicking stores the current value as a preset — dedupe (already present → do nothing, no toast), cap at 5 with oldest dropped (state keeps save order; storage always written sorted), sonner success toast `t("fit_saved_toast", { mb: value.toFixed(1) })`. Custom presets render as extra chips appended to the presets row, styled exactly like the built-ins (border-border / selected border-orange-500 bg-orange-500/10, token-based → dark-mode safe) with a small orange Star subtitle line and an X button (aria-label "Remove preset X.X MB") that deletes from state + localStorage; chips always display ascending. Disabled save when input invalid.
+- Wrote TEMP scripts/check-i18n-parity.ts (asserts both new keys exist in all 6 locales with identical {mb} placeholder sets + full key parity vs en), ran `bun scripts/check-i18n-parity.ts` → "i18n parity OK … en has 250 keys, all locales in parity", then DELETED the script.
+- Verification: `bunx tsc --noEmit 2>&1 | grep -E "(fit-mode|i18n)"` → empty; `bun run lint 2>&1 | grep -E "(fit-mode|i18n|sw\.js)"` → no matches (the single repo warning is pre-existing in tools/dialog.tsx, owned by the concurrent tools task — not this task's files). dev.log tail: the only compile errors are pre-existing Module-not-found for in-progress ./secure-tools / ./repair-tools / ./smart-tools imports in src/components/fixmypdf/tools/tools-registry.ts (another agent's in-flight workstream; error traces never mention fit-mode/i18n/sw.js and were present in dev.log before this task's first request) — zero new compile errors from this change set.
+
+Stage Summary:
+- Make-It-Fit now supports up to 5 device-local custom MB target presets: save via "Save target", remove via chip X, persisted across reloads in localStorage "fixmypdf:custom-presets" only (no backend/db), hydration-stable loading, dark-mode-safe chips, and i18n shipped in all 7 dictionaries with verified {mb} placeholder parity. sw.js bumped to v2 with cache-first handling of the OCR tool's /tesseract/* and /tessdata/* assets, matching the pdfjs asset strategy for offline repeat visits.
+
+---
+Task ID: 10-f
+Agent: general-purpose sub agent (annotate tools)
+Task: Tool Shed annotate group — fill-forms, sign, page-numbers, watermark, header-footer
+Work Log:
+- Read worklog.md + contracts (tools/types.ts, tools/kit.ts, format.ts, engine.ts) and the Tool Shed shell (parts.tsx, dialog.tsx, tools-registry.ts, tools-section.tsx); registry already imports ./annotate-tools.
+- Built src/lib/pdf/tools/annotate.ts — 5 pure pdf-lib engines: fillForm (per-field try/catch, skipped-names collected, optional flatten wrapped so a flatten failure still returns the filled file with a meta note), stampSignature (embedPng + anchor math with 4% x-margin / offsetPct y-offset), addPageNumbers (Helvetica rgb(0.35,0.39,0.48), widthOfTextAtSize centering, skip-first doesn't shift the sequence), addWatermark (text: rotated-centre via rotated-bbox midpoint, diagonal tiling grid every ~pageW/3 with alternating half-step offsets; image: PNG/JPEG magic-byte sniff, center or 4-corner stamps, true drawText/drawImage opacity), addHeaderFooter (6 slots, 24pt margins, shrink-to-fit loop 0.5pt steps down to 6pt then ellipsis truncation). All engines: assertNotEncrypted after loadPdf, ctx.progress per page/step, throwIfAborted in loops, deterministic baseName outputs (-filled/-signed/-numbered/-watermarked/-headfoot).
+- Built src/components/fixmypdf/tools/annotate-tools.tsx exporting ANNOTATE_TOOLS (5 ToolDefs, category "annotate", batchRun only for page-numbers "1 / N" bottom-center start 1 and watermark CONFIDENTIAL defaults): fill-forms loads fields inline (run-token/alive-guarded async, setState only after await per Next 16 set-state-in-effect; panel remounts per file via key) with per-type controls (Input/Textarea/Switch/Select over getOptions) in a max-h-96 slim-scrollbar list, zero-fields amber note + hidden run, flatten Switch default ON; sign has draw|type Tabs (canvas pad 520×160, pointer capture, stroke #111827 2.5px round, Clear button, transparent-PNG export; typed preview via Segoe Script/Bradley Hand cursive canvas with auto-shrink) + page/anchor/width%/offset% controls; page-numbers, watermark (RadioGroup text|image + ToolNote), header-footer (3+3 slot grid, size Select, "24pt margins · Helvetica" hint, run disabled until any line).
+- Verified pdf-lib 1.17.1 field/draw APIs and lucide 0.525 icons (Signature/Stamp/PenLine/Hash/PanelTop all present) before writing.
+- Verification: bunx tsc --noEmit filtered to the two files → zero output; bun run lint filtered "annotate" → zero output (removed an unused eslint-disable img-element directive after the config turned that rule off); temp smoke script (deleted after run) exercised all engines against a generated 3-field-form PDF — 6/6 fields set + values round-tripped, flatten → 0 fields, bogus radio option → skipped, page numbers (formats/skip-first/start 5), tiled+single+image watermarks, signature on page 2, friendly errors for page-99 OOB / empty header-footer / formless PDF, AbortSignal → AbortError; fixed duplicate opacity in watermark meta; palette check → no blue/indigo/purple.
+Stage Summary:
+- Annotate group shipped: fill-forms, sign, page-numbers, watermark, header-footer — engines in src/lib/pdf/tools/annotate.ts, UI in src/components/fixmypdf/tools/annotate-tools.tsx (ANNOTATE_TOOLS), 100% client-side, honest progress/abort/friendly errors, deterministic output names, tsc + lint clean on both files. No other files touched (worklog append excepted).
+
+---
+Task ID: 10-a
+Agent: general-purpose sub agent (organize tools)
+Task: Tool Shed organize group — merge, split, rotate, reorder, reverse, insert-blank, duplicate
+Work Log:
+- Read worklog.md + contracts (types.ts, kit.ts, format.ts, engine.ts) + shared parts (ToolStep/ToolHint/ToolNote) + ToolDialog to nail the Component contract (controls + run button only; dialog owns progress/results) and the existing slate/orange/dark-mode class language.
+- Created `src/lib/pdf/tools/organize.ts` — pure pdf-lib surgery engine, no pdfjs import anywhere: mergePdfs (copyPages all pages per file → {first}-merged.pdf), parseGroups (comma tokens, each via parsePageSpec, per-group friendly errors) + chunkEveryN, splitPdf (fresh doc per group → {base}-pages-1-3.pdf, single-page mode pads {base}-page-001.pdf), rotatePages ((existing+angle)%360 via setRotation(degrees(...)), stacks with prior rotation), reorderPdfPages (copyPages in new 0-based order, isPermutation guard), reversePdfPages (last→first), insertBlankPage (size cloned from page 1 via getPage(0).getSize(), out.insertPage(idx,[w,h]) for start/end/after-page), duplicatePdfPages (repeated indices accepted: each selected page repeated `times` right after the original). All fns: ctx.progress + throwIfAborted in loops, `doc.isEncrypted` → exact friendly "Unlock it first (Protect & Clean → Remove password)" error, 0-page guards, exported ENCRYPTED_PDF_MESSAGE + isPermutation for the UI. Batch runs wired: rotate=90° all, reverse=same, insert-blank=at end.
+- Created `src/components/fixmypdf/tools/organize-tools.tsx` ("use client", exports ORGANIZE_TOOLS with the 7 exact ids/names/taglines/icons, category "organize"):
+  - merge: numbered file list with ↑/↓ per row + "Sort by name" (localeCompare numeric); order kept as index permutation validated by isPermutation so add/remove safely falls back to drop order (no setState-in-effect).
+  - split: RadioGroup ranges/every-n/single; ranges input validated live via parseGroups against probed page count, every-n input 1..500, emerald "This will create N PDFs" preview; run builder resolves page count (probe reuse or loadPdf) then engine splitPdf with singlePageNames for per-page mode.
+  - rotate: angle Select (90 default/180/270) + pages Input (blank=all) with live parsePageSpec validation; engine stacks rotation.
+  - reorder: on file change analyzeDocument(files[0]) with a run-token ref + cleanup invalidation ("Rendering previews… x%" inline row, no setState after unmount/switch); dnd-kit grid (DndContext closestCenter + PointerSensor distance 6, SortableContext rectSortingStrategy, useSortable + CSS.Transform.toString, 96px thumbs, orange 1-based badge, GripVertical hint, touch-manipulation), Reverse order / Reset order buttons; ≤1 page → amber "Nothing to reorder — this PDF has a single page." + disabled run; engine rebuild via copyPages(display).
+  - reverse: control-free, "Reverse page order" run button, single-page amber note via probe.
+  - insert-blank: position Select start/end(default)/after-page + N input (1..pageCount-1, live guards incl. single-page case), hint that the blank matches page-1 size; engine inserts at computed index.
+  - duplicate: pages Input (blank = every page) + times 1..10 default 1, live "Output will have N pages" emerald note; engine builds the repeat-order array.
+  - Shared local helpers: usePdfProbe (keyed by name:size:lastModified → pages + encrypted amber warnings, async-callback-only setState for the Next 16 set-state-in-effect rule), resolvePageCount, ProbeRow, RunButton (w-full, disabled={busy}, imperative labels).
+- Verification: `bunx tsc --noEmit | grep organize` → empty (only pre-existing errors elsewhere: __repair-smoke, examples/, tools-registry missing the OTHER group files convert/optimize/secure/smart/repair/annotate — not this task's scope); `bun run lint | grep organize` → clean. Engine behavior proven with a throwaway bun+pdf-lib harness (deleted after): 31/31 checks — parseGroups/chunkEveryN/isPermutation edge cases, merge page counts, split names+contents, rotation math incl. stacking, reorder/reverse verified by per-page width fingerprints, blank size cloning at start/after/end, duplicate layouts (selected ×2 and all ×1).
+Stage Summary:
+- Organize group shipped: 7 tools (merge, split, rotate, reorder, reverse, insert-blank, duplicate) in exactly two new files — src/lib/pdf/tools/organize.ts (typed, friendly-error engine, abort+progress aware, zero pdfjs/network) and src/components/fixmypdf/tools/organize-tools.tsx (contract-compliant controls + run buttons only). 100% client-side, brand-compliant (orange/emerald/amber, semantic tokens + dark: variants), no blue/indigo/purple. Tools-registry already picks ORGANIZE_TOOLS up; remaining group files belong to sibling tasks.
+---
+Task ID: 10-e
+Agent: general-purpose sub agent (repair tools)
+Task: Tool Shed repair group — fix-corrupted, remove-duplicates, deskew, scan-cleanup, split-scans
+Work Log:
+- Read worklog.md, contracts (tools/types.ts, tools/kit.ts), format.ts, engine.ts + existing Tool Shed shell (parts.tsx, dialog.tsx, tools-registry.ts) to match conventions before writing anything.
+- Created src/lib/pdf/tools/repair.ts (pure TS, no React, no static pdfjs): 5 engines over kit primitives only (fileBytes, loadPdf, savePdf, renderPages, canvasesToPdfBytes, pdfOutput, throwIfAborted) + baseName/formatBytes:
+  - fixCorrupted: tolerant PDFDocument.load({ignoreEncryption, throwOnInvalidObject:false, updateMetadata:false}) → save({useObjectStreams:false}) for a plain-xref max-compat rebuild; page count verified by re-loading the output ("N pages recovered · size"); load/save/verify failures all throw the honest "Too damaged for in-browser structural repair…" message.
+  - dedupePages: renderPages dpi 40 grayscale → 8×8 average-hash (grayscale mean → 64 bits) + ink ratio per canvas; similar = Hamming ≤ 3, exact = distance 0 AND same canvas dims; keeps first occurrence, rebuilds kept indices via pdf-lib copyPages (kept pages stay vector); meta "Removed k duplicate pages · x of n kept".
+  - deskewPdf: per page downscale ≤400px → binarize (<200 lum) → for −8..8° step 0.5 score horizontal-projection variance (y' = y + x·tan a, Σ count², max = straightest); |angle| < 0.3° skipped; rotation in-place onto white rotated bounding box; rebuild dpi 100; progress "Page i of n · tilt a°".
+  - scanCleanup: renderPages dpi 150 with contrast/brightness/grayscale CSS filter → snapWhites pass over Uint8ClampedArray (r,g,b ≥ threshold → 255) with putImageData → rebuild quality 0.8.
+  - splitDoubleScans: renderPages dpi 150 → cut x = w/2 + offset, inner-edge margin trim each half, interleave halves per order radio → canvasesToPdfBytes dpi 150 (page pt = px×72/150); meta "2N pages from N".
+  - All engines: friendly Errors ("This PDF has no pages.", honest password message after loadPdf + doc.isEncrypted check), per-page ctx.progress, throwIfAborted in every loop, deterministic {base}-fixed/-deduped/-deskewed/-clean/-split.pdf names.
+- Created src/components/fixmypdf/tools/repair-tools.tsx ("use client", exports REPAIR_TOOLS: ToolDef[]): Wrench/CopyX/AlignVerticalJustifyCenter/Sparkles/Columns2 icons; shared local ChoiceOption (label+RadioGroupItem, orange selected state) and SliderRow (Label+readout+Slider) primitives; ToolStep/ToolHint/ToolNote per spec incl. exact amber/emerald notes; controls-only components with single w-full run Button (disabled={busy}), split-scans io.multiple:false (no batch), other four expose batchRun with defaults (similar / auto / cleanup defaults).
+- Verified math standalone in bun: projection-variance estimator recovers correction = −content tilt for ±3.5/±5/±8/0.5° synthetic line sets (sign convention consistent with ctx.rotate in rotateCanvasInPlace); Hamming sanity 0/3.
+- Full browser E2E of the engines via a temporary esbuild-bundled harness served from public/ (deleted after): synthetic PDFs built with pdf-lib in-browser; 9/9 PASS — fix-corrupted valid rebuild (3 pages recovered · 2.3 KB), truncated file → honest "Too damaged…" throw, dedupe similar+exact both remove the identical pair (output 2/3 pages), deskew auto straightens a −4° scan ("1 pages · 1 straightened"), manual 0 skips, scan-cleanup 3 pages cleaned, split left/right-first + offset/margin → 2 pages from 1 each.
+- Verification: `bunx tsc --noEmit | grep "src/(lib/pdf/tools/repair|components/fixmypdf/tools/repair-tools)"` → empty; `bun run lint | grep -i repair` → clean (overall 0 errors; the 1 pre-existing warning is in dialog.tsx, untouched); no blue/indigo/purple, no `any`, no console.* in my files.
+- Ops note: the shared dev server was OOM-killed by the kernel (global-oom on next-server ~1.9GB RSS) while agent-browser + esbuild ran concurrently; restarted it via `bun run dev` (persistence re-checked). Root "/" currently 500s on module-not-found for the six sibling tool-group files (organize/convert/optimize/secure/annotate/smart) that tools-registry.ts imports — pre-existing parallel-build state, NOT caused by this task; the REPAIR_TOOLS import resolves and my files compile clean.
+Stage Summary:
+- Repair group shipped: 2 files (src/lib/pdf/tools/repair.ts engines + src/components/fixmypdf/tools/repair-tools.tsx UI exporting REPAIR_TOOLS) implementing all 5 tools with progress, cancellation, honest errors, deterministic output names, and batchRun where specified. All engines browser-verified end-to-end with synthetic PDFs (9/9 smoke checks) plus standalone math validation of the deskew estimator; tsc/lint green for both files. Next agent: nothing pending on the repair group; the 500 on / blocks on the other Tool Shed group files landing.
+
+---
+Task ID: 10-b
+Agent: general-purpose sub agent (convert tools)
+Task: Tool Shed convert group — pdf-to-images, images-to-pdf, grayscale, n-up, booklet
+Work Log:
+- Read worklog.md + contracts (types.ts, kit.ts, format.ts) and the existing Tool Shed shell (dialog.tsx, parts.tsx, tools-registry.ts) to match the component contract (controls + run button only; dialog owns progress/cancel/results).
+- Created src/lib/pdf/tools/convert.ts — pure-TS engine, pdf-lib only, pdf.js reached exclusively through kit's lazy loader, heic2any only as dynamic import `(await import("heic2any")).default`:
+  - pdfToImages: pdf-lib page-count guard ("This PDF has no pages."), parsePageSpec for the optional page input (blank = all), kit renderPages (dpi/pages/signal/onProgress), then a local canvasToBlobBytes helper (canvas.toBlob, quality only for JPEG) → per-page blobOutput `{base}-page-001.jpg/png` with "page N · W×H px" meta; friendly render/encode error mapping (password-protected detection included).
+  - imagesToPdf: jpeg/png → direct embedJpg/embedPng with graceful fall-through to canvas decode (CMYK/exotic), HEIC/HEIF (type or extension) → dynamic heic2any → PNG blob, everything else → createImageBitmap with <img>-element fallback → PNG; page sizing auto (1px=1pt) or a4/letter with per-image orientation + 24pt fit & center; friendly per-file decode error; output images-to-fixmypdf.pdf.
+  - grayscalePdf: rasterizePdfBytes(bytes, {dpi:150, filter:"grayscale(1)"}, {dpi:150, quality}) with page-count guard + progress; `{base}-grayscale.pdf`.
+  - nUpPdf + bookletPdf share tile helpers (fitTile aspect-fit/center, drawTile = drawPage + 0.5pt border rgb(0.8,0.8,0.85), 18pt margins + 8pt gutter): 2-up landscape / 4-up portrait sheets (A4 595.28×841.89, Letter 612×792), trailing empty cells skipped; booklet pads to a multiple of 4 with blank cells using the canonical fold order [padded-2s, 2s+1, 2s+2, padded-2s-1]; embedding errors at save mapped to friendly messages (pdf-lib resolves embedded pages lazily at save).
+  - Every loop honours throwIfAborted(ctx.signal) and reports ctx.progress per page/image/sheet.
+- Created src/components/fixmypdf/tools/convert-tools.tsx — "use client", exports CONVERT_TOOLS: ToolDef[] (5 tools, category "convert", icons Image/ImageIcon, Images, Contrast, Grid2X2, BookOpen, exact io specs incl. images-to-pdf accept ".jpg,.jpeg,.png,.webp,.gif,.bmp,.heic,.heif,image/*", multiple, maxFiles 100, hint). Controls built from shadcn RadioGroup/Select/Slider/Input + ToolStep/ToolHint/ToolNote (amber note on grayscale, booklet double-sided note); images-to-pdf has an ↑/↓ reorder list derived render-time from files (no setState-in-effect); run buttons are w-full, disabled={busy}, imperative labels (e.g. "Export PDF as JPG", "Build PDF from N images", "Lay out as 2-up", "Build booklet PDF").
+- Verified with headless bun smoke tests (pdf-lib-only paths): n-up/booklet sheet counts + exact page geometry, JPEG/PNG fallback + friendly decode error, invalid-PDF and zero-page friendly errors, plus a byte-level imposition-order proof (inflated each sheet's content stream + form XObjects): booklet 8p → [8|1],[2|7],[6|3],[4|5], 6p padding blanks correct, n-up 2-up/4-up reading order exact. All passed; temp scripts deleted.
+- bunx tsc --noEmit filtered to my two files → zero errors; bun run lint → zero mentions of convert files (only pre-existing warning in dialog.tsx). Dev-server 500 on / is from other agents' not-yet-created tool group files (./organize-tools, ./smart-tools, …) imported by tools-registry.ts — convert.ts and convert-tools.tsx resolve fine.
+- Note for next agent: fflate 0.8.3 inflateSync fails under Bun (env quirk, zlib data inflates fine with node:zlib); browser runtime unaffected, kit zipOutputs is compression-direction only.
+Stage Summary:
+- Convert group shipped: PDF to Images (JPG/PNG, quality 50–95, DPI 96–300, optional page spec → per-page images), Images to PDF (JPG/PNG/WebP/GIF/BMP/HEIC with reorder + auto/A4/Letter sizing → single tidy PDF), PDF to Grayscale (3 quality presets), N-up Layout (2-up/4-up on A4/Letter with hairline tile borders) and Booklet Imposition (verified saddle-stitch order, blank-cell padding, double-sided printing note). 100% client-side, abortable, progress-reporting, deterministic naming, friendly errors; tsc + lint clean for both files.
+
+---
+Task ID: 10-c
+Agent: general-purpose sub agent (optimize tools; worklog backfilled by orchestrator after deadline)
+Task: Tool Shed optimize group — resize-pages, crop-margins, scale-pages, dpi-fixer, quality-reducer
+
+Work Log:
+- Created src/lib/pdf/tools/optimize.ts + src/components/fixmypdf/tools/optimize-tools.tsx (5 tools, category "optimize").
+- batchRun provided for resize (A4 auto), crop (auto, 12pt), dpi-fixer (300), quality-reducer (q60); scale-pages interactive only.
+- Vector-preserving A4/Letter re-layout via embedPage; auto crop via low-DPI whitespace bounding boxes; pixel-size rebuild with contain/cover.
+
+Stage Summary:
+- Files verified by orchestrator: tsc clean, exports present, contract-conformant. Logged post-hoc because the agent hit the context deadline after writing files.
+
+---
+Task ID: 10-d
+Agent: general-purpose sub agent (secure tools; worklog backfilled by orchestrator after deadline)
+Task: Tool Shed secure group — protect, unprotect, redact, flatten, sanitize, metadata editor
+
+Work Log:
+- Created src/lib/pdf/tools/secure.ts + src/components/fixmypdf/tools/secure-tools.tsx (6 tools, category "secure").
+- Encryption via @cantoo/pdf-lib dynamic import (AES-256), verified against its typings; plain save() yields unencrypted output for unprotect.
+- Redact = term-bbox burn-in on affected pages (rasterized) + structural copy of clean pages; sanitize = structural rebuild dropping JS/attachments/annots/metadata.
+
+Stage Summary:
+- Files verified by orchestrator: tsc clean, exports present, contract-conformant. Logged post-hoc after context deadline.
+
+---
+Task ID: 10-g
+Agent: general-purpose sub agent (smart tools; worklog backfilled by orchestrator after deadline)
+Task: Tool Shed smart group — extract-text, extract-images, why-big, visual-diff, ocr, auto-prescribe
+
+Work Log:
+- Created src/lib/pdf/tools/smart.ts + src/components/fixmypdf/tools/smart-tools.tsx (6 tools, category "smart").
+- OCR fully self-hosted: tesseract.js v7 worker/core from /tesseract/, eng model from /tessdata/ (cacheMethod none); no external requests.
+- why-big + auto-prescribe render in-component reports and dispatch fixmypdf:open-tool / target:workspace events consumed by tools-section.
+
+Stage Summary:
+- Files verified by orchestrator: tsc clean, exports present, contract-conformant. Logged post-hoc after context deadline.
+
+---
+Task ID: 10-main
+Agent: main orchestrator (Z.ai Code)
+Task: Add all 49 no-database / no-store features — "Tool Shed" (39 new tools) + workflow features
+
+Work Log:
+- Foundation: src/lib/pdf/tools/types.ts (ToolDef/RunCtx/ToolOutput contracts) + kit.ts (shared engine kit: renderPages/renderOnePage with gray+adjust pixel ops, rasterizePdfBytes, zipOutputs via fflate, extractTextPerPage, loadPdf/savePdf).
+- Shell: dialog.tsx (stages pick/run/done, progress+Cancel, per-output Get + ZIP-all, before/after first-page preview, batch runner, memory-cleared note), parts.tsx (ToolFiles dropzone with drag+click+Ctrl+V paste, ToolStep/ToolHint/ToolNote), tools-section.tsx (search + 7 category chips + 39-card grid + fixmypdf:open-tool event listener), tools-registry.ts, app.tsx + header "All tools" link.
+- Parallel subagents built 7 engine+component groups (39 tools): organize(7), convert(5), optimize(5), secure(6 incl. @cantoo/pdf-lib AES-256 protect/unprotect + term-bbox redact), repair(5), annotate(5 incl. signature pad), smart(6 incl. offline OCR + why-big + auto-prescribe). 10-h added device-local custom target presets (fit-mode, i18n ×7, sw.js v2 caches /tesseract/ + /tessdata/).
+- Assets: tesseract.js worker+cores copied to public/tesseract/, eng.traineddata.gz (tessdata_fast) to public/tessdata/ — OCR makes ZERO external requests.
+- E2E bugs found & fixed by orchestrator: (1) tool-switch inherited previous tool's files/results → render-time derived-state reset; (2) ctx.filter silently ignored by pdf.js v6 (grayscale/scan-cleanup/OCR-preprocess AND pre-existing makeItFit grayscale) → replaced with applyCanvasPixelOps bitmap rewrites across kit + engine + 5 tool engines; (3) batch mode unreachable for single-file tools → effectiveIo grants multiple when batchRun exists, >1 files auto-switches to batch panel.
+
+Stage Summary:
+- Browser-verified E2E: merge 2→8pp byte-validated; split every-2→3 PDFs+ZIP validated; AES-256 protect (fails w/o pw, opens with) + unprotect roundtrip incl. wrong-pw error; grayscale byte-verified (7301 gray px / 0 colored); fill-forms fields→flattened, "Ada Lovelace" extractable; OCR page → 44 B text, 0 external requests; why-big breakdown; batch 2 files→2 outputs+ZIP; cancel mid-OCR; custom preset 3.7 MB persists across reload; dark + 390px mobile clean (no h-scroll); flagship Make It Fit re-verified post-edit (891 KB, -67%, Passed All Limits). tsc+lint clean. Known non-blockers: pre-existing dev-only Radix useId hydration warning; headless-automation can't save .txt downloads (identical code path delivers PDFs/ZIPs).

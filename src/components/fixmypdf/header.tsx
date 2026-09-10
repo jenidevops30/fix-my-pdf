@@ -32,6 +32,12 @@ export function Header() {
           </div>
           <nav className="hidden md:flex items-center gap-3" aria-label="Page sections">
             <a
+              href="#tools"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              All tools
+            </a>
+            <a
               href="#how-it-works"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >

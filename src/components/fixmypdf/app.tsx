@@ -26,6 +26,7 @@ import { Pricing } from "./pricing";
 import { PrivacyRibbon } from "./privacy-ribbon";
 import { PwaRegister } from "./pwa-register";
 import { SecondaryCards } from "./secondary-cards";
+import { ToolsSection } from "./tools/tools-section";
 import { Workspace } from "./workspace";
 import type {
   AnalysisState,
@@ -460,6 +461,7 @@ function FixMyPdfAppInner() {
           callbacks={callbacks}
         />
         <SecondaryCards mode={mode} onModeChange={setMode} />
+        <ToolsSection />
         <HowItWorks />
         <Faq />
         <Pricing onUseNow={scrollToWorkspace} />

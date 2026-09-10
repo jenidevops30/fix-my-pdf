@@ -8,6 +8,7 @@
  */
 import { PDFDocument } from "pdf-lib";
 import { getPdfjs, loadPdfjsDoc } from "./pdfjs";
+import { applyCanvasPixelOps } from "./tools/kit";
 import { baseName, formatBytes, pagesForFilename } from "./format";
 
 /* ---------------------------------- types ---------------------------------- */
@@ -388,8 +389,8 @@ async function rasterizePdf(
       if (!ctx) throw new Error("Canvas is not available in this browser.");
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      if (grayscale) ctx.filter = "grayscale(1)";
       await page.render({ canvas: null, canvasContext: ctx, viewport }).promise;
+      if (grayscale) applyCanvasPixelOps(canvas, { gray: true });
 
       const jpeg = await canvasToJpegBytes(canvas, quality);
       const img = await out.embedJpg(jpeg);
