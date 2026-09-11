@@ -39,7 +39,7 @@ export interface FitResult {
   passes: CompressionPass[];
   success: boolean;
   pagesOut: number;
-  method: "metadata-only" | "rasterized";
+  method: "metadata-only" | "rasterized" | "original";
   trimmedToPages?: number;
   pagesBeforeTrim?: number;
 }
@@ -433,8 +433,14 @@ export async function makeItFit(file: File, opts: FitOptions): Promise<FitResult
   const originalBytes = await readBytes(file);
   const originalSize = originalBytes.length;
   const pageCount = (await getBasicInfo(file)).pageCount;
+  // The "before" row is truthful: when a byte target exists and the original
+  // already fits it, the row earns a ✓ instead of a decorative ✗.
   const passes: CompressionPass[] = [
-    { label: "Original file", size: originalSize, ok: false },
+    {
+      label: "Original file",
+      size: originalSize,
+      ok: targetBytes !== undefined ? originalSize <= targetBytes : false,
+    },
   ];
 
   const totalUnits = (stripMetadata ? 1 : 0) + COMPRESSION_LADDER.length;
@@ -481,6 +487,22 @@ export async function makeItFit(file: File, opts: FitOptions): Promise<FitResult
         method: "metadata-only",
       };
     }
+  }
+
+  // ---- already fits? never run the raster ladder on a file that passes —
+  // rasterizing would only degrade quality for zero benefit.
+  if (targetBytes !== undefined && baseBytes.length <= targetBytes) {
+    onProgress?.({ phase: "Done", percent: 100 });
+    return {
+      blob: bytesToBlob(baseBytes),
+      filename: `${baseName(file.name)}-fit-${formatBytes(baseBytes.length).replace(/\s/g, "")}.pdf`,
+      size: baseBytes.length,
+      originalSize,
+      passes,
+      success: true,
+      pagesOut: pageCount,
+      method: stripMetadata ? "metadata-only" : "original",
+    };
   }
 
   // ---- raster ladder
@@ -606,8 +628,34 @@ export async function applyRequirements(
     onProgress: opts.onProgress,
   });
 
+  // Truthful reporting: when a page trim happened, the ladder must start from
+  // the file the user actually brought us — makeItFit only ever saw the
+  // trimmed intermediate, so its "Original file" row is relabeled and the
+  // true original is prepended.
+  let passes = result.passes;
+  if (trimmedTo !== undefined && maxPages !== undefined) {
+    passes = passes.map((p, i) =>
+      i === 0
+        ? {
+            ...p,
+            label: `Pages trimmed to first ${maxPages} of ${pageCount}`,
+          }
+        : p
+    );
+    passes = [
+      {
+        label: "Original file",
+        size: file.size,
+        ok: maxBytes !== undefined ? file.size <= maxBytes : false,
+      },
+      ...passes,
+    ];
+  }
+
   return {
     ...result,
+    originalSize: trimmedTo !== undefined ? file.size : result.originalSize,
+    passes,
     filename:
       trimmedTo !== undefined
         ? `${baseName(file.name)}-fit.pdf`

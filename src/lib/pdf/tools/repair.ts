@@ -9,6 +9,7 @@
 import { PDFDocument } from "pdf-lib";
 import {
   canvasesToPdfBytes,
+  extractTextPerPage,
   fileBytes,
   loadPdf,
   pdfOutput,
@@ -101,9 +102,11 @@ interface PageFingerprint {
   /** rendered canvas dimensions (px) — part of the "exact" test. */
   w: number;
   h: number;
+  /** 32×32 grayscale downsample — mean-absolute-difference verification. */
+  small: Uint8Array;
 }
 
-/** 8×8 average-hash: grayscale mean per cell → bit above/below the mean. */
+/** 8×8 average-hash + 32×32 gray downsample for a second-opinion compare. */
 function fingerprintCanvas(canvas: HTMLCanvasElement): PageFingerprint {
   const small = document.createElement("canvas");
   small.width = 8;
@@ -126,13 +129,36 @@ function fingerprintCanvas(canvas: HTMLCanvasElement): PageFingerprint {
   const mean = sum / 64;
   const bits = new Uint8Array(64);
   for (let i = 0; i < 64; i++) bits[i] = gray[i] >= mean ? 1 : 0;
-  return { bits, ink: ink / 64, w: canvas.width, h: canvas.height };
+
+  // 32×32 gray copy: the hash alone is too coarse — pages that differ only
+  // by a small text stamp can produce identical 64-bit fingerprints, which
+  // used to nuke 11/12 unique pages. The mean-absolute-difference over this
+  // downsample catches those deltas before a page is dropped.
+  const mid = document.createElement("canvas");
+  mid.width = 32;
+  mid.height = 32;
+  const mctx = mid.getContext("2d", { willReadFrequently: true });
+  if (!mctx) throw new Error(NO_CANVAS_MSG);
+  mctx.drawImage(canvas, 0, 0, 32, 32);
+  const mdata = mctx.getImageData(0, 0, 32, 32).data;
+  const small32 = new Uint8Array(32 * 32);
+  for (let i = 0; i < small32.length; i++) {
+    small32[i] =
+      0.299 * mdata[i * 4] + 0.587 * mdata[i * 4 + 1] + 0.114 * mdata[i * 4 + 2];
+  }
+  return { bits, ink: ink / 64, w: canvas.width, h: canvas.height, small: small32 };
 }
 
 function hamming(a: Uint8Array, b: Uint8Array): number {
   let d = 0;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
   return d;
+}
+
+function meanAbsDiff(a: Uint8Array, b: Uint8Array): number {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+  return sum / a.length;
 }
 
 /**
@@ -156,27 +182,41 @@ export async function dedupePages(
     signal: ctx.signal,
     onProgress: (done, total) =>
       ctx.progress({
-        percent: 4 + Math.round((done / total) * 46),
+        percent: 4 + Math.round((done / total) * 40),
         detail: `Rendering page ${done} of ${total}`,
       }),
   });
   if (!canvases.length) throw new Error(NO_PAGES_MSG);
 
+  // Text-layer gate: pages whose extracted text differs are never
+  // duplicates, no matter how alike they look at 40 dpi (a one-character
+  // difference is real content, not scanner noise).
+  ctx.progress({ percent: 46, detail: "Reading the text layer…" });
+  const pageTexts = await extractTextPerPage(bytes, undefined, ctx.signal);
+  const textKey = (i: number): string => (pageTexts[i] ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+
   const total = canvases.length;
   const kept: number[] = [];
   const keptPrints: PageFingerprint[] = [];
+  const keptTexts: string[] = [];
   let removed = 0;
   for (let i = 0; i < total; i++) {
     throwIfAborted(ctx.signal);
     const print = fingerprintCanvas(canvases[i]);
+    const text = textKey(i);
     let dup = false;
-    for (const k of keptPrints) {
-      const d = hamming(print.bits, k.bits);
-      const isDup =
+    for (let k = 0; k < keptPrints.length; k++) {
+      const kp = keptPrints[k];
+      if (keptTexts[k] !== text) continue; // different words → different page
+      const d = hamming(print.bits, kp.bits);
+      const visual =
         sensitivity === "exact"
-          ? d === 0 && print.w === k.w && print.h === k.h
+          ? d === 0 && print.w === kp.w && print.h === kp.h
           : d <= 3;
-      if (isDup) {
+      if (!visual) continue;
+      // second-opinion pixel check kills text-lookalike false positives
+      const mad = meanAbsDiff(print.small, kp.small);
+      if (sensitivity === "exact" ? mad < 0.5 : mad < 4) {
         dup = true;
         break;
       }
@@ -185,6 +225,7 @@ export async function dedupePages(
     else {
       kept.push(i);
       keptPrints.push(print);
+      keptTexts.push(text);
     }
     ctx.progress({
       percent: 50 + Math.round(((i + 1) / total) * 26),

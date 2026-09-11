@@ -371,7 +371,12 @@ export async function addWatermark(
   const meta: string[] = [];
 
   if (cfg.mode === "text") {
-    const text = (cfg.text ?? "").trim() || "CONFIDENTIAL";
+    // No silent defaults: an empty stamp would watermark with text the user
+    // never typed (and the meta would quote it). Ask for the words instead.
+    const text = (cfg.text ?? "").trim();
+    if (!text) {
+      throw new Error("Type the watermark text first — or switch to an image stamp.");
+    }
     const size = clamp(cfg.size ?? 72, 8, 200);
     const rotation = clamp(cfg.rotation ?? 45, 0, 90);
     const c = WATERMARK_COLORS[cfg.color ?? "slate"];

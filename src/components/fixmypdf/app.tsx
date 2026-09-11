@@ -369,6 +369,16 @@ function FixMyPdfAppInner() {
 
   const onResetResult = useCallback(() => setResult({ kind: "idle" }), []);
 
+  // Mode switches are a fresh intent — a result computed for the previous
+  // mode (fit ladder, extract count…) must never bleed into the new one.
+  const modeRef = useRef<Mode>("fit");
+  const changeMode = useCallback((m: Mode) => {
+    if (modeRef.current === m) return;
+    modeRef.current = m;
+    setMode(m);
+    setResult({ kind: "idle" });
+  }, []);
+
   /* ------------------------- celebrate + auto-download --------------------- */
 
   // Confetti: adjust state during render when the result changes (React's
@@ -427,7 +437,7 @@ function FixMyPdfAppInner() {
   /* --------------------------------- render -------------------------------- */
 
   const callbacks: WorkspaceCallbacks = {
-    onModeChange: setMode,
+    onModeChange: changeMode,
     onFileSelected,
     onClearFile,
     runFit,
@@ -447,7 +457,7 @@ function FixMyPdfAppInner() {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
       <main className="w-full max-w-5xl mx-auto px-6 py-12 md:py-16 space-y-12">
-        <Hero mode={mode} onModeChange={setMode} />
+        <Hero mode={mode} onModeChange={changeMode} />
         <Workspace
           file={file}
           info={info}
@@ -460,7 +470,7 @@ function FixMyPdfAppInner() {
           onDownload={handleDownload}
           callbacks={callbacks}
         />
-        <SecondaryCards mode={mode} onModeChange={setMode} />
+        <SecondaryCards mode={mode} onModeChange={changeMode} />
         <ToolsSection />
         <HowItWorks />
         <Faq />

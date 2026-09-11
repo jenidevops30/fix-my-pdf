@@ -73,6 +73,12 @@ export async function extractText(
     );
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") throw err;
+    const raw = err instanceof Error ? err.message : "";
+    if (/header|parse|invalid|structure/i.test(raw)) {
+      throw new Error(
+        "That file doesn't look like a valid PDF — try opening it in a PDF reader first."
+      );
+    }
     throw new Error("Could not read this PDF's text layer — the file may be corrupted.");
   }
   const total = allPages.length;
@@ -889,14 +895,28 @@ async function findDuplicatePages(
     signal,
     onProgress,
   });
+  // Text gate: pages with different extracted text are never duplicates —
+  // the 8×8 hash alone cannot see a one-word difference and used to report
+  // most of a unique document as copies.
+  const texts = await extractTextPerPage(
+    bytes,
+    undefined,
+    signal
+  ).catch(() => [] as string[]);
+  const textKey = (i: number): string =>
+    (texts[i] ?? "").toLowerCase().replace(/\s+/g, " ").trim();
   const dupes: number[] = [];
-  const kept: string[] = [];
+  const kept: Array<{ hash: string; text: string }> = [];
   for (let i = 0; i < canvases.length; i++) {
     const page = i + 1;
     const hash = averageHash(canvases[i]);
     if (!hash || blankPages.includes(page)) continue; // blanks are reported separately
-    if (kept.some((k) => hamming(k, hash) <= 3)) dupes.push(page);
-    else kept.push(hash);
+    const text = textKey(i);
+    const isDup = kept.some(
+      (k) => k.text === text && hamming(k.hash, hash) <= 3
+    );
+    if (isDup) dupes.push(page);
+    else kept.push({ hash, text });
   }
   canvases.length = 0;
   return dupes;

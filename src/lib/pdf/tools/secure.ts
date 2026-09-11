@@ -359,7 +359,10 @@ async function scanForTerms(
           normToRaw.push(c);
           lastWasSpace = true;
         } else {
-          norm += ch;
+          // Lowercase per character (length-preserving) so the haystack
+          // matches the lowercased needle — "Section" must find "Section".
+          const lowered = ch.toLowerCase();
+          norm += lowered.length === 1 ? lowered : ch;
           normToRaw.push(c);
           lastWasSpace = false;
         }

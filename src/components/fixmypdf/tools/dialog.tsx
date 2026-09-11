@@ -147,6 +147,23 @@ export function ToolDialog({ tool, open, onOpenChange }: ToolDialogProps) {
     return () => window.removeEventListener("fixmypdf:tool-files-error", onError);
   }, []);
 
+  // Escape closes the dialog (standard dialog behaviour) — but never while a
+  // run is in flight, where closing would orphan a running engine.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (busy) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, busy, onOpenChange]);
+
   const run = useCallback(
     async (build: (ctx: RunCtx) => Promise<ToolOutput[]>) => {
       if (!tool) return;

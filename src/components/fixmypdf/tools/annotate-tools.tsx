@@ -877,8 +877,12 @@ function WatermarkControls({ files, busy, run }: ToolComponentProps) {
       </ToolStep>
 
       <ToolStep n={2} title="Apply" last>
+        {mode === "text" && !text.trim() && (
+          <ToolNote>Type the watermark text first — or switch to an image stamp.</ToolNote>
+        )}
         <RunButton
           busy={busy}
+          disabled={mode === "text" && !text.trim()}
           label="Add watermark & download"
           icon={StampIcon}
           onRun={() =>

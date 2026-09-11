@@ -15,7 +15,15 @@
  *   - returns deterministic bytes plus a short human meta line.
  */
 import { PDFDocument, degrees } from "pdf-lib";
-import { loadPdf, renderPages, savePdf, throwIfAborted, formatBytes } from "./kit";
+import {
+  loadPdf,
+  renderPages,
+  savePdf,
+  throwIfAborted,
+  yieldToUi,
+  formatBytes,
+} from "./kit";
+import { parsePageSpec } from "../format";
 import type { ToolProgress } from "./types";
 
 /* --------------------------------- types ---------------------------------- */
@@ -355,6 +363,8 @@ interface RasterToPdfOpts extends EngineOpts {
   quality: number;
   /** Post-render grayscale (reliable pixel op — ctx.filter is ignored by pdf.js v6). */
   gray?: boolean;
+  /** 1-based subset to process (default: all pages). */
+  pages?: number[];
   /** Optional redraw producing the final page canvas (exact-pixel rebuild). */
   redraw?: (src: HTMLCanvasElement) => HTMLCanvasElement;
   /** Output page size in pt (defaults to px × 72 / dpi). */
@@ -368,9 +378,11 @@ interface RasterToPdfOpts extends EngineOpts {
  * rasterize path produces, without holding every page's canvas at once).
  */
 async function rasterToPdf(bytes: Uint8Array, opts: RasterToPdfOpts): Promise<Uint8Array> {
-  const { pageCount, dpi, maxSide = 2600, quality, gray, redraw, pageSize, onProgress, signal } = opts;
+  const { pageCount, dpi, maxSide = 2600, quality, gray, pages, redraw, pageSize, onProgress, signal } = opts;
   const out = await PDFDocument.create();
-  const chunkSize = dpi >= 400 ? 2 : dpi >= 250 ? 4 : 8;
+  // Small chunks at high DPI: a 300-dpi A4 canvas is a ~33 MB buffer, and
+  // peak memory = chunkSize × buffer — keep it at 2 canvases there.
+  const chunkSize = dpi >= 250 ? 2 : 8;
   let done = 0;
   for (let start = 0; start < pageCount; start += chunkSize) {
     throwIfAborted(signal);
@@ -381,7 +393,9 @@ async function rasterToPdf(bytes: Uint8Array, opts: RasterToPdfOpts): Promise<Ui
       dpi,
       maxSide,
       gray,
-      pages: nums,
+      pages: pages
+        ? pages.slice(start, start + chunkSize)
+        : nums,
       signal,
       onProgress: (d) => {
         onProgress?.({
@@ -405,8 +419,12 @@ async function rasterToPdf(bytes: Uint8Array, opts: RasterToPdfOpts): Promise<Ui
         percent: Math.round((done / pageCount) * 100),
         detail: `Page ${done} of ${pageCount}`,
       });
+      // Hand the main thread back between pages — at high DPI each encode is
+      // heavy, and without this yield the tab freezes and Cancel dies.
+      await yieldToUi();
     }
   }
+  await yieldToUi();
   return savePdf(out);
 }
 
@@ -491,22 +509,52 @@ export async function scaleToPixels(
  */
 export async function fixDpi(
   bytes: Uint8Array,
-  opts: { dpi: number } & EngineOpts
+  opts: { dpi: number; pagesSpec?: string } & EngineOpts
 ): Promise<OptimizeResult> {
-  const { dpi, onProgress, signal } = opts;
+  const { dpi, pagesSpec, onProgress, signal } = opts;
   if (dpi !== 150 && dpi !== 200 && dpi !== 300 && dpi !== 600) {
     throw new Error("Choose a DPI of 150, 200, 300 or 600.");
   }
-  const { pageCount } = await prepare(bytes);
-  const saved = await rasterToPdf(bytes, {
-    pageCount,
-    dpi,
-    maxSide: dpi * 11, // ≈ 11 in cap at the chosen resolution
-    quality: 0.85,
-    onProgress,
-    signal,
-  });
-  return { bytes: saved, meta: `${pageCount} pages · ${dpi} DPI` };
+  const { doc, pageCount } = await prepare(bytes);
+  let wanted = Array.from({ length: pageCount }, (_, i) => i + 1);
+  if (pagesSpec && pagesSpec.trim()) {
+    wanted = parsePageSpec(pagesSpec, pageCount); // friendly errors on junk
+  }
+  if (!wanted.length) {
+    throw new Error("No pages matched that page range.");
+  }
+
+  // Honest workload guard: each 300-dpi A4 page is a ~33 MB canvas buffer
+  // plus JPEG encode churn — empirically ~260 MP of re-rendering OOMs a
+  // browser tab. Stop before that happens, with a clear way out.
+  const first = doc.getPage(wanted[0] - 1);
+  const { width: pw, height: ph } = first.getSize();
+  const pxPerPage = (pw / 72) * dpi * ((ph / 72) * dpi);
+  const totalPx = pxPerPage * wanted.length;
+  const MAX_PIXELS = 120_000_000; // ≈ 13 A4 pages at 300 dpi, ≈ 55 at 150 dpi
+  if (totalPx > MAX_PIXELS) {
+    const atLowerDpi = Math.floor(MAX_PIXELS / ((pw / 72) * 150 * ((ph / 72) * 150)));
+    throw new Error(
+      `That's about ${Math.round(totalPx / 1_000_000)} megapixels of re-rendering — too heavy for one in-browser pass (the tab would run out of memory). Try a lower DPI (about ${atLowerDpi} pages fit at 150 DPI) or fix a smaller page range (e.g. “1-10”) in batches.`
+    );
+  }
+
+  const saved = await rasterToPdf(
+    bytes,
+    {
+      pageCount: wanted.length,
+      dpi,
+      maxSide: dpi * 11, // ≈ 11 in cap at the chosen resolution
+      quality: 0.85,
+      pages: wanted,
+      onProgress,
+      signal,
+    }
+  );
+  return {
+    bytes: saved,
+    meta: `${wanted.length} of ${pageCount} pages · ${dpi} DPI`,
+  };
 }
 
 /* -------------------------- 5. quality reducer ---------------------------- */

@@ -310,3 +310,33 @@ Work Log:
 
 Stage Summary:
 - Browser-verified E2E: merge 2→8pp byte-validated; split every-2→3 PDFs+ZIP validated; AES-256 protect (fails w/o pw, opens with) + unprotect roundtrip incl. wrong-pw error; grayscale byte-verified (7301 gray px / 0 colored); fill-forms fields→flattened, "Ada Lovelace" extractable; OCR page → 44 B text, 0 external requests; why-big breakdown; batch 2 files→2 outputs+ZIP; cancel mid-OCR; custom preset 3.7 MB persists across reload; dark + 390px mobile clean (no h-scroll); flagship Make It Fit re-verified post-edit (891 KB, -67%, Passed All Limits). tsc+lint clean. Known non-blockers: pre-existing dev-only Radix useId hydration warning; headless-automation can't save .txt downloads (identical code path delivers PDFs/ZIPs).
+
+---
+Task ID: 12-main
+Agent: main orchestrator (Z.ai Code) — "god software tester" full-app audit
+Task: Act as a god software tester: test the overall app step by step, fix all issues, make it perfect.
+
+Work Log:
+- Static audit: `bunx tsc --noEmit` (src/ clean; only pre-existing errors in examples/ + skills/) and `bun run lint` (clean).
+- Fixtures generated at /tmp/pdf-fixtures/: sample-30p.pdf (30pp, blanks), heavy-12p.pdf (1.15MB), broken-truncated.pdf, fake.pdf, form-test.pdf (AcroForm), tin-a/b/c.pdf, red-4x4.png, enc-real.pdf (real AES-256, pw "secret123" — first gen2 attempt was NOT encrypted; @cantoo needs doc.encrypt()).
+- Orchestrator browser E2E: initial load, header, hero, all 6 flagship modes (fit/keep/requirements/blank/remove/find) — full runs verified; footer, dark mode, mobile 390px, i18n (zh/hi selector), language switch.
+- 3 parallel subagent QA sweeps of the Tool Shed (39 tools, isolated sessions qa-a/qa-b2/qa-c2): every tool opened + run with fixtures incl. guard/edge cases (fake PDFs, wrong password, encrypted input, invalid ranges, empty inputs). 39/39 tools functional; 15+ issues found.
+- Fixes applied (all verified in browser afterwards):
+  1. Header logo crushed at 1280px (max-w-5xl→6xl, logo shrink-0, badge lg→xl, tagline clamp 180px).
+  2. STALE RESULT LEAK: flagship mode switches kept the previous mode's Verification Engine result → changeMode() (modeRef-guarded) resets result on every mode change (app.tsx).
+  3. Engine truthfulness (engine.ts): "Original file" pass now ✓ when it actually fits; makeItFit short-circuits when the file already fits (no pointless raster ladder); applyRequirements reports the TRUE original size (file.size) and relabels the trimmed intermediate ("Pages trimmed to first N of M"), so bars/ladder/percent are honest (verified: 2.6MB original shown, −60% real).
+  4. Redact case bug (secure.ts): term needle was lowercased but haystack wasn't → "Section" found nothing; per-char length-preserving lowercase in scanForTerms. Verified 30/30 pages match now.
+  5. Dedupe false positives (repair.ts + smart.ts): pages differing by a word were mass-removed (11/12!). Now: text-layer gate (different extracted text ⇒ never duplicate) + 32×32 gray MAD second opinion (<0.5 exact / <4 similar). Verified: heavy-12p → "No duplicate pages found · all 12 kept"; Auto-Prescribe honest.
+  6. DPI Fixer tab freeze/OOM (optimize.ts): fixDpi gained pagesSpec + 120MP pixel-budget guard with actionable copy (verified: 30p@300dpi refused instantly, tab responsive; 1-2@150 runs, meta "2 of 30 pages · 150 DPI"); rasterToPdf yields to UI per page + chunkSize 2 at ≥250dpi; UI: page-range input with live validation.
+  7. Watermark empty-text: engine threw instead of silently stamping "CONFIDENTIAL"; UI disables Run + shows note; meta quotes the actual typed text.
+  8. kit.loadPdf wraps raw pdf-lib parse errors into the app's friendly invalid-PDF copy (merge/fake.pdf verified).
+  9. ToolDialog: Escape closes when idle, is ignored (prevented) mid-run.
+  10. ToolFiles: duplicate files deduped on re-select (name+size+lastModified) + toast "N duplicate files… skipped".
+  11. Split run button disabled when probe reports encrypted.
+  12. Scale to Pixel Size: 16–4000 live validation, disabled run, honest button label; Crop: live huge/negative margin notes.
+  13. Booklet meta now "N printed sides (M sheets double-sided)".
+  14. Extract Text maps parse/header errors to the friendly invalid-PDF copy.
+- Hydration: the pre-existing dev-only Radix mismatch was bisected — a mounted-guard around the language Select breaks useId symmetry for ALL later id components (accordion aria-controls). Switcher restored to always-rendered Select (hydration-safe; provider starts on EN on both passes). Remaining dev-console aria-controls diff inside Radix Select is upstream (client-side item registration); prod unaffected — documented as known non-blocker.
+
+Stage Summary:
+- Full app audited end-to-end: static (tsc/lint clean), browser E2E (6 flagship modes + 39 Tool Shed tools + edge cases), all found issues FIXED and re-verified in the browser. Fit pipeline re-verified deterministic (2.6MB→891KB, −67%, zh + en), merge/dedupe/DPI-guard/watermark/redact/scaling all browser-verified post-fix. Known non-blockers: upstream dev-only Radix Select hydration attr log; pass-ladder labels inside the verification panel remain English (engine strings) while surrounding chrome is localized.

@@ -208,6 +208,17 @@ function CropComponent({ files, busy, run }: ToolComponentProps) {
   });
   const file = files[0];
 
+  // Live sanity note: margins bigger than the page make the run stop, so
+  // warn while typing instead of only after the click.
+  const hugeMargin = Object.values(margins).some((v) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 150;
+  });
+  const negativeMargin = Object.values(margins).some((v) => {
+    const n = Number(v);
+    return v.trim() !== "" && (!Number.isFinite(n) || n < 0);
+  });
+
   const onRun = () => {
     if (!file) return;
     run((ctx) =>
@@ -325,6 +336,15 @@ function CropComponent({ files, busy, run }: ToolComponentProps) {
               ))}
             </div>
             <ToolHint>Applied to every page in the document.</ToolHint>
+            {negativeMargin && (
+              <ToolNote>Margins must be zero or positive numbers.</ToolNote>
+            )}
+            {!negativeMargin && hugeMargin && (
+              <ToolNote>
+                Very large margins — anything past the page edge will stop the run. Most
+                pages are under 300 mm tall.
+              </ToolNote>
+            )}
           </div>
         )}
       </ToolStep>
@@ -332,7 +352,11 @@ function CropComponent({ files, busy, run }: ToolComponentProps) {
         Cropping sets the visible box — the hidden content stays in the file. Use Flatten
         afterwards to discard it for good.
       </ToolNote>
-      <Button className="w-full" disabled={busy} onClick={onRun}>
+      <Button
+        className="w-full"
+        disabled={busy || negativeMargin}
+        onClick={onRun}
+      >
         Crop margins
       </Button>
     </div>
@@ -362,23 +386,24 @@ function ScaleComponent({ files, busy, run }: ToolComponentProps) {
   const [fit, setFit] = useState<PixelFit>("contain");
   const file = files[0];
 
-  const displaySize = (v: string): number => {
+  const parseSize = (v: string): number | null => {
     const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? Math.round(n) : 600;
+    return Number.isFinite(n) && n >= 16 && n <= 4000 ? Math.round(n) : null;
   };
-  const W = displaySize(width);
-  const H = displaySize(height);
+  const W = parseSize(width);
+  const H = parseSize(height);
+  const sizeInvalid = W === null || H === null;
 
   const onRun = () => {
-    if (!file) return;
+    if (!file || W === null || H === null) return;
     run((ctx) =>
       runEngine(
         file,
         ctx,
         (bytes) =>
           scaleToPixels(bytes, {
-            width: Number(width),
-            height: Number(height),
+            width: W,
+            height: H,
             fit,
             signal: ctx.signal,
             onProgress: ctx.progress,
@@ -422,6 +447,11 @@ function ScaleComponent({ files, busy, run }: ToolComponentProps) {
           </div>
         </div>
         <ToolHint>Between 16 and 4000 pixels per side — e.g. 600 × 600 portal rules.</ToolHint>
+        {sizeInvalid && (
+          <ToolNote>
+            Enter whole pixel sizes between 16 and 4000 for width and height.
+          </ToolNote>
+        )}
       </ToolStep>
       <ToolStep n={2} title="Fit" last>
         <RadioGroup
@@ -446,11 +476,12 @@ function ScaleComponent({ files, busy, run }: ToolComponentProps) {
         </RadioGroup>
       </ToolStep>
       <ToolNote>
-        Output pages are rebuilt as {W}×{H} pixel pictures (1 px = 1 pt). Text becomes part of
-        the image — perfect for upload portals that check page dimensions.
+        {W !== null && H !== null
+          ? `Output pages are rebuilt as ${W}×${H} pixel pictures (1 px = 1 pt). Text becomes part of the image — perfect for upload portals that check page dimensions.`
+          : "Output pages are rebuilt at an exact pixel size (1 px = 1 pt)."}
       </ToolNote>
-      <Button className="w-full" disabled={busy} onClick={onRun}>
-        Rebuild pages at {W}×{H} px
+      <Button className="w-full" disabled={busy || sizeInvalid} onClick={onRun}>
+        {W !== null && H !== null ? `Rebuild pages at ${W}×${H} px` : "Rebuild pages"}
       </Button>
     </div>
   );
@@ -462,7 +493,11 @@ const DPI_OPTIONS = [150, 200, 300, 600] as const;
 
 function DpiComponent({ files, busy, run }: ToolComponentProps) {
   const [dpi, setDpi] = useState<number>(300);
+  const [pagesSpec, setPagesSpec] = useState("");
   const file = files[0];
+
+  const specLooksValid =
+    pagesSpec.trim() === "" || /^[0-9\s,\-]+$/.test(pagesSpec.trim());
 
   const onRun = () => {
     if (!file) return;
@@ -471,7 +506,12 @@ function DpiComponent({ files, busy, run }: ToolComponentProps) {
         file,
         ctx,
         (bytes) =>
-          fixDpi(bytes, { dpi, signal: ctx.signal, onProgress: ctx.progress }),
+          fixDpi(bytes, {
+            dpi,
+            pagesSpec,
+            signal: ctx.signal,
+            onProgress: ctx.progress,
+          }),
         `${baseName(file.name)}-${dpi}dpi.pdf`
       )
     );
@@ -479,7 +519,7 @@ function DpiComponent({ files, busy, run }: ToolComponentProps) {
 
   return (
     <div className="space-y-4">
-      <ToolStep n={1} title="Target resolution" last>
+      <ToolStep n={1} title="Target resolution">
         <RadioGroup
           value={String(dpi)}
           onValueChange={(v) => setDpi(Number(v))}
@@ -497,8 +537,34 @@ function DpiComponent({ files, busy, run }: ToolComponentProps) {
           photos or fine print.
         </ToolHint>
       </ToolStep>
-      <ToolNote>Pages are re-rendered at a single resolution; text becomes part of the image.</ToolNote>
-      <Button className="w-full" disabled={busy} onClick={onRun}>
+      <ToolStep n={2} title="Pages" last>
+        <div className="space-y-1.5">
+          <Label htmlFor="dpi-pages" className="text-xs text-muted-foreground">
+            Page range (blank = every page)
+          </Label>
+          <Input
+            id="dpi-pages"
+            placeholder="e.g. 1-10, 14"
+            value={pagesSpec}
+            onChange={(e) => setPagesSpec(e.target.value)}
+            disabled={busy}
+            className="font-mono"
+            autoComplete="off"
+            aria-invalid={!specLooksValid}
+          />
+          {!specLooksValid ? (
+            <ToolNote>
+              Use page numbers and ranges — for example “1-10, 14”.
+            </ToolNote>
+          ) : (
+            <ToolHint>
+              Long documents: fix a range at a time — very large runs are refused to keep the
+              tab responsive. Text becomes part of the image.
+            </ToolHint>
+          )}
+        </div>
+      </ToolStep>
+      <Button className="w-full" disabled={busy || !specLooksValid} onClick={onRun}>
         Normalise to {dpi} DPI
       </Button>
     </div>

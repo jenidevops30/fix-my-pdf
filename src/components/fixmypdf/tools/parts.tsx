@@ -51,13 +51,25 @@ export function ToolFiles({ io, files, onChange, disabled, imageOnly }: ToolFile
       if (!incoming || disabled) return;
       const list = Array.from(incoming);
       const max = io.maxFiles ?? (io.multiple ? 20 : 1);
+      const existingKeys = new Set(
+        files.map((f) => `${f.name}\u0000${f.size}\u0000${f.lastModified}`)
+      );
       const accepted: File[] = [];
       const rejected: string[] = [];
+      let dupes = 0;
       for (const f of list) {
         if (!acceptMatches(f, io.accept)) {
           rejected.push(f.name);
           continue;
         }
+        // Re-selecting the same file must not queue it twice (the dropzone
+        // hint says "drop more" — adding an identical copy is never useful).
+        const key = `${f.name}\u0000${f.size}\u0000${f.lastModified}`;
+        if (io.multiple && existingKeys.has(key)) {
+          dupes += 1;
+          continue;
+        }
+        existingKeys.add(key);
         if (accepted.length < max) accepted.push(f);
       }
       if (rejected.length) {
@@ -65,6 +77,13 @@ export function ToolFiles({ io, files, onChange, disabled, imageOnly }: ToolFile
         window.dispatchEvent(
           new CustomEvent("fixmypdf:tool-files-error", {
             detail: `Unsupported file type: ${label}${rejected.length > 2 ? ` +${rejected.length - 2} more` : ""}`,
+          })
+        );
+      }
+      if (dupes > 0) {
+        window.dispatchEvent(
+          new CustomEvent("fixmypdf:tool-files-error", {
+            detail: `${dupes} duplicate ${dupes === 1 ? "file was" : "files were"} already in the list — skipped.`,
           })
         );
       }

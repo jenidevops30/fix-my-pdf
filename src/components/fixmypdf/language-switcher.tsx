@@ -14,6 +14,12 @@ import { useI18n } from "@/lib/i18n/context";
 export function LanguageSwitcher() {
   const { locale, setLocale, t } = useI18n();
 
+  // NOTE: this Select must render the same tree on the server and the client
+  // first pass. A mounted-guard placeholder here silently shifts Radix's
+  // React useId positions, which breaks hydration for EVERY later id-based
+  // component (FAQ accordion aria-controls etc.). The i18n provider starts on
+  // English on both passes and adopts the saved locale right after mount —
+  // same hydration-safe pattern as next-themes — so no guard is needed.
   return (
     <Select value={locale} onValueChange={(v) => setLocale(v as typeof locale)}>
       <SelectTrigger

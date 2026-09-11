@@ -420,7 +420,7 @@ function SplitTool({ files, busy, run }: ToolComponentProps) {
             ? `Split into ${groupCount} PDF${groupCount === 1 ? "" : "s"}`
             : "Split PDF"
         }
-        disabled={busy || !!ranges.error}
+        disabled={busy || !!ranges.error || probe.encrypted}
         onClick={onRun}
       />
     </div>

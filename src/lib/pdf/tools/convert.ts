@@ -611,7 +611,7 @@ export async function bookletPdf(
     pdfOutput(
       `${fileBase(input)}-booklet.pdf`,
       outBytes,
-      `${n} pages → ${sheetCount} sheets, double-sided · ${formatBytes(outBytes.length)}`
+      `${n} pages → ${sheetCount} printed sides (${Math.ceil(sheetCount / 2)} sheets double-sided) · ${formatBytes(outBytes.length)}`
     ),
   ];
 }

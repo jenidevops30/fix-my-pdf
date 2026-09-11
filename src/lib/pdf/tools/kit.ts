@@ -51,6 +51,11 @@ export function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new DOMException("Operation cancelled", "AbortError");
 }
 
+/** Yield to the event loop so progress paints and Cancel stays responsive. */
+export function yieldToUi(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 export function isAborted(signal?: AbortSignal): boolean {
   return !!signal?.aborted;
 }
@@ -59,10 +64,19 @@ export function isAborted(signal?: AbortSignal): boolean {
 
 export async function loadPdf(input: File | Uint8Array): Promise<PDFDocument> {
   const bytes = input instanceof File ? await fileBytes(input) : input;
-  return PDFDocument.load(bytes, {
-    ignoreEncryption: true,
-    updateMetadata: false,
-  });
+  try {
+    return await PDFDocument.load(bytes, {
+      ignoreEncryption: true,
+      updateMetadata: false,
+    });
+  } catch (err) {
+    // Surface the app's standard friendly copy instead of raw pdf-lib jargon
+    // ("Failed to parse PDF document (line:0 col:104…)").
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new Error(
+      "That file doesn't look like a valid PDF — try opening it in a PDF reader first."
+    );
+  }
 }
 
 export async function savePdf(doc: PDFDocument): Promise<Uint8Array> {
